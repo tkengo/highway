@@ -1,3 +1,4 @@
+#include <string.h>
 #include "queue.h"
 
 file_queue *create_file_queue()
@@ -12,14 +13,14 @@ file_queue_node *enqueue_file(file_queue *queue, char *filename)
 {
     file_queue_node *node = (file_queue_node *)malloc(sizeof(file_queue_node));
     node->next = NULL;
-    node->filename = filename;
+    strcpy(node->filename, filename);
 
     if (queue->first) {
-        queue->first = node;
-        queue->last  = node;
-    } else {
         queue->last->next = node;
         queue->last = node;
+    } else {
+        queue->first = node;
+        queue->last  = node;
     }
 
     return node;

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 typedef struct _file_queue_node {
-    char *filename;
+    char filename[256];
     struct _file_queue_node *next;
 } file_queue_node;
 

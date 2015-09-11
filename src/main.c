@@ -44,10 +44,8 @@ void find_target_files(file_queue *queue, char *dirname)
             continue;
         }
 
-        char buf[1024];
-        strcpy(buf, dirname);
-        strcat(buf, "/");
-        strcat(buf, entry->d_name);
+        char buf[256];
+        sprintf(buf, "%s/%s", dirname, entry->d_name);
 
         if (is_directory(entry)) {
             find_target_files(queue, buf);
@@ -63,12 +61,10 @@ int main(int argc, char **argv)
     file_queue *queue = create_file_queue();
     find_target_files(queue, ".");
 
-    file_queue *current = queue->next;
-    while (current) {
+    file_queue_node *current;
+    while ((current = dequeue_file(queue)) != NULL) {
         printf("%s\n", current->filename);
-        current = current->next;
     }
 
-    printf("hello world\n");
     return 0;
 }
