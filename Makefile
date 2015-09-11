@@ -10,6 +10,7 @@ BUILD_DIR = tmp/build/
 INCLUDE = include
 SOURCES = \
 		  main.c \
+		  file.c \
 		  queue.c
 OBJECTS = $(addprefix $(BUILD_DIR),$(SOURCES:%.c=%.o))
 DEPENDS = $(OBJECTS:%.o=%.d)
