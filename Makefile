@@ -9,7 +9,7 @@ GCC = gcc
 BUILD_DIR = tmp/build/
 INCLUDE = include
 SOURCES = \
-		  main.c \
+		  highway.c \
 		  file.c \
 		  queue.c
 OBJECTS = $(addprefix $(BUILD_DIR),$(SOURCES:%.c=%.o))
