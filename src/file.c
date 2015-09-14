@@ -10,8 +10,7 @@
 bool is_binary(char *filename)
 {
     struct stat st;
-    int errno;
-    if ((errno = stat(filename, &st)) != 0) {
+    if (stat(filename, &st) != 0) {
         return true;
     }
 
