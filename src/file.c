@@ -21,6 +21,9 @@ bool is_binary(int fd)
     /* fclose(fp); */
 
     int actualBufSize = read(fd, buf, BUF_SIZE);
+    if (actualBufSize == 0) {
+        return true;
+    }
     lseek(fd, 0, SEEK_SET);
 
     int unknownCharacter = 0;
@@ -93,8 +96,9 @@ bool is_ignore_directory(struct dirent *entry)
     bool cur = entry->d_type == DT_DIR && entry->d_namlen == 1 && entry->d_name[0] == '.';
     bool up  = entry->d_type == DT_DIR && entry->d_namlen == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool git = entry->d_type == DT_DIR && strcmp(entry->d_name, ".git") == 0;
+    bool vendor = entry->d_type == DT_DIR && strcmp(entry->d_name, "vendor") == 0;
 
-    return cur || up || git;
+    return cur || up || git || vendor;
 }
 
 bool is_directory(struct dirent *entry)

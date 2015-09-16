@@ -9,21 +9,28 @@
 #include "highway.h"
 #include "file.h"
 #include "queue.h"
+#include "log.h"
 
 #define TABLE_SIZE 256
 #define FILENAME_COLOR "\033[1;32m"
+#define TMP_COLOR "\033[1;33m"
 #define RESET_COLOR "\033[0m\033[K"
 #define N 65535
 
 char tbl[TABLE_SIZE];
 char *pattern = "include";
-unsigned char *y;
 
-int search(const unsigned char *y, int n, const char *x, int *matches)
+typedef struct _match {
+    int start;
+    int line_no;
+} match;
+
+int search(const unsigned char *y, int n, const char *x, match *matches)
 {
     int i, j = 0, m = strlen(x);
 
     int count = 0;
+    int line_no = 1;
     char firstCh = x[0];
     char lastCh  = x[m - 1];
     while (j <= n - m) {
@@ -31,11 +38,20 @@ int search(const unsigned char *y, int n, const char *x, int *matches)
             for (i = m - 2; i >= 0 && x[i] == y[j + i]; --i) {
                 if (i <= 0) {
                     // matched
+                    matches[count].start = j;
+                    matches[count].line_no = line_no;
                     count++;
                 }
             }
         }
-        j += tbl[y[j + m]];
+        int skip = tbl[y[j + m]];
+        for (int k = 0; k < skip; k++) {
+            int t = y[j + k];
+            if (t == 0x0A || t == 0x0D) {
+                line_no++;
+            }
+        }
+        j += skip;
     }
 
     return count;
@@ -46,9 +62,29 @@ pthread_mutex_t mutex;
 pthread_cond_t queue_cond;
 bool hoge = false;
 
-void print_result(const unsigned char *buf, const char *filename)
+void print_result(const char *buf, const char *filename, match *matches, int mlen)
 {
     printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
+
+    for (int i = 0; i < mlen; i++) {
+        int start = matches[i].start;
+
+        int begin = start;
+        int end   = start;
+        while (begin >= 0 && buf[begin] != 0x0A && buf[begin] != 0x0D) {
+            begin--;
+        }
+        while (buf[end] != 0x0A && buf[end] != 0x0D) {
+            end++;
+        }
+
+        begin++;
+        int llen = end - begin;
+        char *line = (char *)malloc(sizeof(char) * llen);
+        strncpy(line, buf + begin, llen);
+        printf("%d:%s\n", matches[i].line_no, line);
+    }
+    printf("\n");
 }
 
 void *worker(void *arg)
@@ -57,30 +93,36 @@ void *worker(void *arg)
     unsigned char *buf = (unsigned char *)malloc(sizeof(unsigned char) * N);
 
     file_queue_node *current;
-    /* printf("%dth worker was started\n", id); */
+    log_d("%dth worker: started\n", id);
     while (1) {
         pthread_mutex_lock(&mutex);
+        log_d("%dth worker: lock the mutex\n", id);
         current = dequeue_file(queue);
+        log_d("%dth worker: fetch and it is %s\n", id, current == NULL ? "null" : current->filename);
         if (current == NULL) {
+            log_d("%dth worker: but null, mutex was released\n", id);
             if (hoge) {
                 pthread_mutex_unlock(&mutex);
-                /* printf("%dth workor die\n", id); */
+                log_d("%dth workor die\n", id);
                 break;
             }
             pthread_cond_wait(&queue_cond, &mutex);
+            current = dequeue_file(queue);
         }
-        current = dequeue_file(queue);
         pthread_mutex_unlock(&mutex);
 
         if (current != NULL) {
             int fd = open(current->filename, O_RDONLY);
+            log_d("%dth worker: %s\n", id, current->filename);
             if (!is_binary(fd)) {
-                int count = 0;
                 int n = read(fd, buf, N);
-                int *matches;
-                count = search(buf, n, pattern, matches);
-                if (count > 0) {
-                    print_result(buf, current->filename);
+                if (n > 0) {
+                    match *matches = (match *)malloc(sizeof(match) * 100);
+                    int count = search(buf, n, pattern, matches);
+                    if (count > 0) {
+                        print_result((char *)buf, current->filename, matches, count);
+                    }
+                    free(matches);
                 }
             }
 
@@ -93,7 +135,7 @@ void *worker(void *arg)
     return NULL;
 }
 
-void find_target_files2(file_queue *queue, char *dirname)
+void find_target_files2(char *dirname)
 {
     DIR *dir = opendir(dirname);
     struct dirent *entry;
@@ -106,9 +148,12 @@ void find_target_files2(file_queue *queue, char *dirname)
         sprintf(buf, "%s/%s", dirname, entry->d_name);
 
         if (is_directory(entry)) {
-            find_target_files(queue, buf);
+            find_target_files2(buf);
         } else if (is_search_target(entry)) {
+            log_d("%s%s%s\n", TMP_COLOR, buf, RESET_COLOR);
+        pthread_mutex_lock(&mutex);
             enqueue_file(queue, buf);
+        pthread_mutex_unlock(&mutex);
             pthread_cond_signal(&queue_cond);
         }
     }
@@ -129,7 +174,6 @@ int main(int argc, char **argv)
 
     pthread_cond_init(&queue_cond, NULL);
     pthread_mutex_init(&mutex, NULL);
-    y = (unsigned char *)malloc(sizeof(unsigned char) * N);
     const int THREAD_COUNT = atoi(argv[1]);
     int *id = (int *)malloc(THREAD_COUNT * sizeof(int));
     pthread_t th[THREAD_COUNT];
@@ -138,7 +182,7 @@ int main(int argc, char **argv)
         pthread_create(&th[i], NULL, (void *)worker, (void *)&id[i]);
     }
 
-    find_target_files2(queue, ".");
+    find_target_files2(".");
 
     hoge = true;
     pthread_cond_broadcast(&queue_cond);
@@ -148,7 +192,6 @@ int main(int argc, char **argv)
     }
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&queue_cond);
-    free(y);
 
     return 0;
 }

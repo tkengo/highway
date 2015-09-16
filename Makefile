@@ -11,7 +11,8 @@ INCLUDE = include
 SOURCES = \
 		  highway.c \
 		  file.c \
-		  queue.c
+		  queue.c \
+		  log.c
 OBJECTS = $(addprefix $(BUILD_DIR),$(SOURCES:%.c=%.o))
 DEPENDS = $(OBJECTS:%.o=%.d)
 
