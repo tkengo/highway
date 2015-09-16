@@ -4,6 +4,7 @@
 #include "highway.h"
 #include "queue.h"
 
+bool is_binary(int fd);
 bool is_ignore_directory(struct dirent *entry);
 bool is_directory(struct dirent *entry);
 bool is_search_target(struct dirent *entry);

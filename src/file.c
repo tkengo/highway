@@ -2,26 +2,26 @@
 #include <dirent.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "file.h"
 
 /**
  * Check if the filename is a binary file.
  */
-bool is_binary(char *filename)
+bool is_binary(int fd)
 {
-    struct stat st;
-    if (stat(filename, &st) != 0) {
-        return true;
-    }
-
     // Read the file content only 512-bytes from the header in order to improve speed of the
     // encoding detection. The detection accuracy of this method is not perfect but fast.
     const int BUF_SIZE = 512;
     char buf[BUF_SIZE];
-    int actualBufSize = st.st_size > BUF_SIZE ? BUF_SIZE : st.st_size;
-    FILE *fp = fopen(filename, "rb");
-    fread(buf, sizeof(char), actualBufSize, fp);
-    fclose(fp);
+    /* FILE *fp = fopen(filename, "rb"); */
+    /* int actualBufSize = fread(buf, sizeof(char), actualBufSize, fp); */
+    /* fclose(fp); */
+
+    int actualBufSize = read(fd, buf, BUF_SIZE);
+    lseek(fd, 0, SEEK_SET);
 
     int unknownCharacter = 0;
     for (int i = 0; i < actualBufSize; i++) {
@@ -121,7 +121,7 @@ void find_target_files(file_queue *queue, char *dirname)
 
         if (is_directory(entry)) {
             find_target_files(queue, buf);
-        } else if (is_search_target(entry) && !is_binary(buf)) {
+        } else if (is_search_target(entry)) {
             enqueue_file(queue, buf);
         }
     }
