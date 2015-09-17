@@ -5,13 +5,14 @@
 
 typedef struct _file_queue_node {
     char filename[256];
+    int id;
     struct _file_queue_node *next;
 } file_queue_node;
 
 typedef struct _file_queue {
     file_queue_node *first;
     file_queue_node *last;
-    file_queue_node *current;
+    int total;
 } file_queue;
 
 file_queue *create_file_queue();

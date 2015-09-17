@@ -28,7 +28,7 @@ typedef struct _match {
     int line_no;
 } match;
 
-int search(const unsigned char *y, int n, const char *x, match *matches)
+int search(const char *y, int n, const char *x, match *matches)
 {
     int i, j = 0, m = strlen(x);
 
@@ -47,7 +47,7 @@ int search(const unsigned char *y, int n, const char *x, match *matches)
                 }
             }
         }
-        int skip = tbl[y[j + m]];
+        int skip = tbl[(unsigned char)y[j + m]];
         for (int k = 0; k < skip; k++) {
             int t = y[j + k];
             if (t == 0x0A || t == 0x0D) {
@@ -62,6 +62,7 @@ int search(const unsigned char *y, int n, const char *x, match *matches)
 
 file_queue *queue;
 pthread_mutex_t mutex;
+pthread_mutex_t print_mutex;
 pthread_cond_t queue_cond;
 bool hoge = false;
 
@@ -69,30 +70,39 @@ void print_result(const char *buf, const char *filename, match *matches, int mle
 {
     printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
 
-    for (int i = 0; i < mlen; i++) {
-        int start = matches[i].start;
+    int pattern_length = strlen(pattern);
+    for (int i = 0; i < mlen; ) {
+        int current_line_no = matches[i].line_no;
+        int begin = matches[i].start;
+        int end   = begin;
 
-        int begin = start;
-        int end   = start;
-        while (begin >= 0 && buf[begin] != 0x0A && buf[begin] != 0x0D) {
+        while (begin > 0 && buf[begin - 1] != 0x0A && buf[begin - 1] != 0x0D) {
             begin--;
         }
         while (buf[end] != 0x0A && buf[end] != 0x0D) {
             end++;
         }
 
-        begin++;
+        printf("%s%d%s:", LINE_NO_COLOR, current_line_no, RESET_COLOR);
 
-        int m = strlen(pattern);
-        int llen = end - begin;
-        int pflen = start - begin;
-        int sflen = end - start - m;
-        char *pf = (char *)malloc(sizeof(char) * pflen);
-        char *sf = (char *)malloc(sizeof(char) * sflen);
+        int print_start = begin;
+        while (i < mlen && current_line_no == matches[i].line_no) {
+            int match_start = matches[i].start;
+            int prefix_length = match_start - print_start;
+            char *prefix = (char *)malloc(sizeof(char) * prefix_length);
 
-        strncpy(pf, buf + begin, pflen);
-        strncpy(sf, buf + start + m, sflen);
-        printf("%s%d%s:%s%s%s%s%s\n", LINE_NO_COLOR, matches[i].line_no, RESET_COLOR, pf, MATCH_WORD_COLOR, pattern, RESET_COLOR, sf);
+            strncpy(prefix, buf + print_start, prefix_length);
+            printf("%s%s%s%s", prefix, MATCH_WORD_COLOR, pattern, RESET_COLOR);
+
+            print_start = match_start + pattern_length;
+            i++;
+        }
+
+        int suffix_length = end - print_start;
+        char *suffix = (char *)malloc(sizeof(char) * suffix_length);
+        strncpy(suffix, buf + print_start, suffix_length);
+        printf("%s", suffix);
+        printf("end: %d\n", end);
     }
     printf("\n");
 }
@@ -100,7 +110,7 @@ void print_result(const char *buf, const char *filename, match *matches, int mle
 void *worker(void *arg)
 {
     int id = *((int *)arg);
-    unsigned char *buf = (unsigned char *)malloc(sizeof(unsigned char) * N);
+    char *buf = (char *)malloc(sizeof(char) * N);
 
     file_queue_node *current;
     log_d("%dth worker: started\n", id);
@@ -131,7 +141,9 @@ void *worker(void *arg)
                     match *matches = (match *)malloc(sizeof(match) * 100);
                     int count = search(buf, n, pattern, matches);
                     if (count > 0) {
-                        print_result((char *)buf, current->filename, matches, count);
+                        pthread_mutex_lock(&print_mutex);
+                        print_result(buf, current->filename, matches, count);
+                        pthread_mutex_unlock(&print_mutex);
                     }
                     free(matches);
                 }
@@ -189,6 +201,7 @@ int main(int argc, char **argv)
 
     pthread_cond_init(&queue_cond, NULL);
     pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&print_mutex, NULL);
     const int THREAD_COUNT = atoi(argv[1]);
     int *id = (int *)malloc(THREAD_COUNT * sizeof(int));
     pthread_t th[THREAD_COUNT];
@@ -206,6 +219,7 @@ int main(int argc, char **argv)
         pthread_join(th[i], NULL);
     }
     pthread_mutex_destroy(&mutex);
+    pthread_mutex_destroy(&print_mutex);
     pthread_cond_destroy(&queue_cond);
 
     return 0;
