@@ -11,6 +11,7 @@ typedef struct _file_queue_node {
 typedef struct _file_queue {
     file_queue_node *first;
     file_queue_node *last;
+    file_queue_node *current;
 } file_queue;
 
 file_queue *create_file_queue();

@@ -12,9 +12,12 @@
 #include "log.h"
 
 #define TABLE_SIZE 256
-#define FILENAME_COLOR "\033[1;32m"
-#define TMP_COLOR "\033[1;33m"
-#define RESET_COLOR "\033[0m\033[K"
+#define FILENAME_COLOR "\033[32m"
+#define YELLOW_COLOR "\033[33m"
+#define RED_COLOR "\033[31m"
+#define LINE_NO_COLOR "\033[33m"
+#define MATCH_WORD_COLOR "\033[43m\033[30m"
+#define RESET_COLOR "\033[49m\033[39m"
 #define N 65535
 
 char tbl[TABLE_SIZE];
@@ -79,10 +82,17 @@ void print_result(const char *buf, const char *filename, match *matches, int mle
         }
 
         begin++;
+
+        int m = strlen(pattern);
         int llen = end - begin;
-        char *line = (char *)malloc(sizeof(char) * llen);
-        strncpy(line, buf + begin, llen);
-        printf("%d:%s\n", matches[i].line_no, line);
+        int pflen = start - begin;
+        int sflen = end - start - m;
+        char *pf = (char *)malloc(sizeof(char) * pflen);
+        char *sf = (char *)malloc(sizeof(char) * sflen);
+
+        strncpy(pf, buf + begin, pflen);
+        strncpy(sf, buf + start + m, sflen);
+        printf("%s%d%s:%s%s%s%s%s\n", LINE_NO_COLOR, matches[i].line_no, RESET_COLOR, pf, MATCH_WORD_COLOR, pattern, RESET_COLOR, sf);
     }
     printf("\n");
 }
@@ -100,7 +110,7 @@ void *worker(void *arg)
         current = dequeue_file(queue);
         log_d("%dth worker: fetch and it is %s\n", id, current == NULL ? "null" : current->filename);
         if (current == NULL) {
-            log_d("%dth worker: but null, mutex was released\n", id);
+            log_d("%dth worker: so the program is waiting and mutex was released\n", id);
             if (hoge) {
                 pthread_mutex_unlock(&mutex);
                 log_d("%dth workor die\n", id);
@@ -110,10 +120,11 @@ void *worker(void *arg)
             current = dequeue_file(queue);
         }
         pthread_mutex_unlock(&mutex);
+        log_d("%dth workor: unlock the mutex and current is %s\n", id, current == NULL ? "null" : current->filename);
 
         if (current != NULL) {
             int fd = open(current->filename, O_RDONLY);
-            log_d("%dth worker: %s\n", id, current->filename);
+            log_d("%dth worker: %scatch %s%s\n", id, RED_COLOR, current->filename, RESET_COLOR);
             if (!is_binary(fd)) {
                 int n = read(fd, buf, N);
                 if (n > 0) {
@@ -124,6 +135,9 @@ void *worker(void *arg)
                     }
                     free(matches);
                 }
+                log_d("%dth worker: search complete %s\n", id, current->filename);
+            } else {
+                log_d("%dth worker: maybe %s was determined as a binary\n", id, current->filename);
             }
 
             close(fd);
@@ -150,10 +164,10 @@ void find_target_files2(char *dirname)
         if (is_directory(entry)) {
             find_target_files2(buf);
         } else if (is_search_target(entry)) {
-            log_d("%s%s%s\n", TMP_COLOR, buf, RESET_COLOR);
-        pthread_mutex_lock(&mutex);
+            pthread_mutex_lock(&mutex);
             enqueue_file(queue, buf);
-        pthread_mutex_unlock(&mutex);
+            log_d("enqueu %s%s%s\n", YELLOW_COLOR, buf, RESET_COLOR);
+            pthread_mutex_unlock(&mutex);
             pthread_cond_signal(&queue_cond);
         }
     }
@@ -164,6 +178,7 @@ int main(int argc, char **argv)
 {
     queue = create_file_queue();
 
+    pattern = argv[2];
     int i, m = strlen(pattern);
     for (i = 0; i < TABLE_SIZE; ++i) {
         tbl[i] = m + 1;
