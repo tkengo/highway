@@ -111,23 +111,23 @@ bool is_search_target(struct dirent *entry)
     return entry->d_type == DT_REG || entry->d_type == DT_LNK;
 }
 
-void find_target_files(file_queue *queue, char *dirname)
-{
-    DIR *dir = opendir(dirname);
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (is_ignore_directory(entry)) {
-            continue;
-        }
-
-        char buf[256];
-        sprintf(buf, "%s/%s", dirname, entry->d_name);
-
-        if (is_directory(entry)) {
-            find_target_files(queue, buf);
-        } else if (is_search_target(entry)) {
-            enqueue_file(queue, buf);
-        }
-    }
-    closedir(dir);
-}
+/* void find_target_files(file_queue *queue, char *dirname) */
+/* { */
+/*     DIR *dir = opendir(dirname); */
+/*     struct dirent *entry; */
+/*     while ((entry = readdir(dir)) != NULL) { */
+/*         if (is_ignore_directory(entry)) { */
+/*             continue; */
+/*         } */
+/*  */
+/*         char buf[256]; */
+/*         sprintf(buf, "%s/%s", dirname, entry->d_name); */
+/*  */
+/*         if (is_directory(entry)) { */
+/*             find_target_files(queue, buf); */
+/*         } else if (is_search_target(entry)) { */
+/*             enqueue_file(queue, buf); */
+/*         } */
+/*     } */
+/*     closedir(dir); */
+/* } */
