@@ -88,21 +88,20 @@ void print_result(const char *buf, const char *filename, match *matches, int mle
         int print_start = begin;
         while (i < mlen && current_line_no == matches[i].line_no) {
             int match_start = matches[i].start;
-            int prefix_length = match_start - print_start;
+            int prefix_length = match_start - print_start + 1;
             char *prefix = (char *)malloc(sizeof(char) * prefix_length);
 
-            strncpy(prefix, buf + print_start, prefix_length);
+            strlcpy(prefix, buf + print_start, prefix_length);
             printf("%s%s%s%s", prefix, MATCH_WORD_COLOR, pattern, RESET_COLOR);
 
             print_start = match_start + pattern_length;
             i++;
         }
 
-        int suffix_length = end - print_start;
+        int suffix_length = end - print_start + 1;
         char *suffix = (char *)malloc(sizeof(char) * suffix_length);
-        strncpy(suffix, buf + print_start, suffix_length);
-        printf("%s", suffix);
-        printf("end: %d\n", end);
+        strlcpy(suffix, buf + print_start, suffix_length);
+        printf("%s\n", suffix);
     }
     printf("\n");
 }
