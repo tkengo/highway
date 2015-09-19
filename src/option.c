@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <getopt.h>
 #include "highway.h"
 #include "option.h"
@@ -56,7 +57,12 @@ void init_option(int argc, char **argv, hw_option *op)
     int paths_count = argc - optind;
     if (paths_count > 0) {
         for (int i = 0; i < paths_count && i < MAX_PATHS_COUNT; i++) {
-            op->root_paths[i] = argv[optind + i];
+            char *path = argv[optind + i];
+            int len = strlen(path);
+            if (path[len - 1] == '/') {
+                path[len - 1] = '\0';
+            }
+            op->root_paths[i] = path;
         }
         op->patsh_count = paths_count;
     }

@@ -48,7 +48,11 @@ void *print_worker(void *arg)
 
         if (current && current->match_lines) {
             matched_line_queue_node *match_line;
-            printf("%s%s%s\n", FILENAME_COLOR, current->filename, RESET_COLOR);
+            char *filename = current->filename;
+            if (filename[0] == '.' && filename[1] == '/') {
+                filename += 2;
+            }
+            printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
             while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
                 printf("%s\n", match_line->line);
             }
