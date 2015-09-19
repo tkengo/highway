@@ -13,7 +13,9 @@ SOURCES = \
 		  file.c \
 		  queue.c \
 		  search.c \
-		  log.c
+		  log.c \
+		  option.c \
+		  help.c
 OBJECTS = $(addprefix $(BUILD_DIR),$(SOURCES:%.c=%.o))
 DEPENDS = $(OBJECTS:%.o=%.d)
 

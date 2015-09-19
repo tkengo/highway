@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "highway.h"
+#include "option.h"
 #include "file.h"
 #include "queue.h"
 #include "log.h"
@@ -158,6 +159,8 @@ int main(int argc, char **argv)
     if (!init_mutex()) {
         return -1;
     }
+
+    init_option(argc, argv);
 
     file_queue *queue = create_file_queue();
     char *pattern = argv[2];
