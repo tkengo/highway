@@ -187,7 +187,9 @@ int main(int argc, char **argv)
     pthread_create(&pth, NULL, (void *)print_worker, (void *)queue);
     log_d("%d threads was launched for searching.", op.worker);
 
-    find_target_files2(queue, op.root);
+    for (int i = 0; i < op.patsh_count; i++) {
+        find_target_files2(queue, op.root_paths[i]);
+    }
     complete_file_finding = true;
     pthread_cond_broadcast(&file_cond);
     pthread_cond_broadcast(&print_cond);

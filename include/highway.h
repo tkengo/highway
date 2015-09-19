@@ -7,5 +7,6 @@ typedef int bool;
 #define false 0
 
 #define DEFAULT_WORKER 2
+#define MAX_PATHS_COUNT 10
 
 #endif // _HIGHWAY_H_

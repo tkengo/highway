@@ -18,8 +18,9 @@ void init_option(int argc, char **argv, hw_option *op)
         { 0, 0, 0, 0 }
     };
 
-    op->worker = DEFAULT_WORKER;
-    op->root   = ".";
+    op->worker        = DEFAULT_WORKER;
+    op->root_paths[0] = ".";
+    op->patsh_count   = 1;
 
     int ch;
     while ((ch = getopt_long(argc, argv, "h", longopts, NULL)) != -1) {
@@ -51,8 +52,12 @@ void init_option(int argc, char **argv, hw_option *op)
         exit(1);
     }
 
-    op->pattern = argv[optind];
-    if (argc == optind + 2) {
-        op->root = argv[optind + 1];
+    op->pattern = argv[optind++];
+    int paths_count = argc - optind;
+    if (paths_count > 0) {
+        for (int i = 0; i < paths_count && i < MAX_PATHS_COUNT; i++) {
+            op->root_paths[i] = argv[optind + i];
+        }
+        op->patsh_count = paths_count;
     }
 }
