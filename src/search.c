@@ -26,6 +26,7 @@ int search(int fd, char *buf, char *pattern, matched_line_queue *match_lines)
 {
     int read_len, total = 0;
     int pattern_len = strlen(pattern);
+    int clen = strlen(MATCH_WORD_COLOR), nlen = strlen(LINE_NO_COLOR), rlen = strlen(RESET_COLOR);
 
     while ((read_len = read(fd, buf, N)) > 0) {
         match matches[MAX_MATCH_COUNT];
@@ -39,7 +40,7 @@ int search(int fd, char *buf, char *pattern, matched_line_queue *match_lines)
             int line_start = matches[i].line_start;
 
             int line_len = end - line_start + 1;
-            int buffer_len = line_len + (strlen(MATCH_WORD_COLOR) + strlen(RESET_COLOR)) * (line_len / pattern_len);
+            int buffer_len = line_len + (clen + rlen) * (line_len / pattern_len) + nlen + rlen + 10;
             matched_line_queue_node *node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
             node->line = (char *)malloc(sizeof(char) * buffer_len);
             sprintf(node->line, "%s%d%s:", LINE_NO_COLOR, current_line_no, RESET_COLOR);
