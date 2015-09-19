@@ -3,10 +3,10 @@
 
 #include <stdlib.h>
 #include "highway.h"
-#include "search.h"
 
 typedef struct _file_queue file_queue;
 typedef struct _file_queue_node file_queue_node;
+typedef struct _matched_line_queue matched_line_queue;
 typedef struct _matched_line_queue_node matched_line_queue_node;
 
 struct _matched_line_queue_node {
@@ -17,10 +17,12 @@ struct _matched_line_queue_node {
     matched_line_queue_node *next;
 };
 
-typedef struct _line_queue {
+struct _matched_line_queue {
     matched_line_queue_node *first;
     matched_line_queue_node *last;
-} matched_line_queue;
+};
+
+#include "search.h"
 
 struct _file_queue_node {
     char filename[256];
