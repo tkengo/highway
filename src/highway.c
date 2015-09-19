@@ -110,6 +110,11 @@ void find_target_files2(file_queue *queue, char *dirname)
     struct dirent *entry;
     DIR *dir = opendir(dirname);
 
+    if (dir == NULL) {
+        log_e("'%s' can't be opend. Is there the directory on your current directory?", dirname);
+        return;
+    }
+
     while ((entry = readdir(dir)) != NULL) {
         if (is_ignore_directory(entry)) {
             continue;
@@ -126,6 +131,7 @@ void find_target_files2(file_queue *queue, char *dirname)
             pthread_cond_signal(&file_cond);
         }
     }
+
     closedir(dir);
 }
 
@@ -174,10 +180,10 @@ int main(int argc, char **argv)
     pthread_create(&pth, NULL, (void *)print_worker, (void *)queue);
     log_d("%d threads was launched for searching.", op.worker);
 
-    find_target_files2(queue, ".");
-
+    find_target_files2(queue, op.root);
     complete_file_finding = true;
     pthread_cond_broadcast(&file_cond);
+    pthread_cond_broadcast(&print_cond);
 
     for (int i = 0; i < op.worker; i++) {
         pthread_join(th[i], NULL);

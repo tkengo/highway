@@ -19,6 +19,7 @@ void init_option(int argc, char **argv, hw_option *op)
     };
 
     op->worker = DEFAULT_WORKER;
+    op->root   = ".";
 
     int ch;
     while ((ch = getopt_long(argc, argv, "h", longopts, NULL)) != -1) {
@@ -51,4 +52,7 @@ void init_option(int argc, char **argv, hw_option *op)
     }
 
     op->pattern = argv[optind];
+    if (argc == optind + 2) {
+        op->root = argv[optind + 1];
+    }
 }

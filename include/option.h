@@ -2,6 +2,7 @@
 #define _OPTION_H_
 
 typedef struct _hw_option {
+    char *root;
     char *pattern;
     int worker;
 } hw_option;
