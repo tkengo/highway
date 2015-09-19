@@ -108,24 +108,24 @@ void *search_worker(void *arg)
     return NULL;
 }
 
-void find_target_files2(file_queue *queue, char *dirname)
+bool find_target_files(file_queue *queue, char *dirname)
 {
-    char buf[1024];
-    struct dirent *entry;
     DIR *dir = opendir(dirname);
-
     if (dir == NULL) {
         if (access(dirname, F_OK) == 0) {
             pthread_mutex_lock(&file_mutex);
             enqueue_file(queue, dirname);
             pthread_mutex_unlock(&file_mutex);
             pthread_cond_signal(&file_cond);
+            return true;
         } else {
-            log_e("'%s' can't be opend. Is there the directory or file on your current directory?", dirname);
+            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", dirname);
+            return false;
         }
-        return;
     }
 
+    char buf[1024];
+    struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         if (is_ignore_directory(entry)) {
             continue;
@@ -134,7 +134,7 @@ void find_target_files2(file_queue *queue, char *dirname)
         sprintf(buf, "%s/%s", dirname, entry->d_name);
 
         if (is_directory(entry)) {
-            find_target_files2(queue, buf);
+            find_target_files(queue, buf);
         } else if (is_search_target(entry)) {
             pthread_mutex_lock(&file_mutex);
             enqueue_file(queue, buf);
@@ -144,6 +144,7 @@ void find_target_files2(file_queue *queue, char *dirname)
     }
 
     closedir(dir);
+    return true;
 }
 
 bool init_mutex()
@@ -174,9 +175,10 @@ bool init_mutex()
 int main(int argc, char **argv)
 {
     if (!init_mutex()) {
-        return -1;
+        return 1;
     }
 
+    int return_code = 0;
     hw_option op;
     init_option(argc, argv, &op);
 
@@ -192,7 +194,10 @@ int main(int argc, char **argv)
     log_d("%d threads was launched for searching.", op.worker);
 
     for (int i = 0; i < op.patsh_count; i++) {
-        find_target_files2(queue, op.root_paths[i]);
+        if (!find_target_files(queue, op.root_paths[i])) {
+            return_code = 1;
+            break;
+        }
     }
     complete_file_finding = true;
     pthread_cond_broadcast(&file_cond);
@@ -208,5 +213,5 @@ int main(int argc, char **argv)
     pthread_cond_destroy(&file_cond);
     pthread_cond_destroy(&print_cond);
 
-    return 0;
+    return return_code;
 }
