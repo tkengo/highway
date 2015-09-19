@@ -13,7 +13,7 @@ void generate_bad_character_table(char *pattern)
         tbl[i] = m + 1;
     }
     for (i = 0; i < m; ++i) {
-        tbl[pattern[i]] = m - i;
+        tbl[(unsigned char)pattern[i]] = m - i;
     }
 }
 
@@ -29,7 +29,7 @@ int search(int fd, char *buf, char *pattern, matched_line_queue *match_lines)
 
     while ((read_len = read(fd, buf, N)) > 0) {
         match matches[MAX_MATCH_COUNT];
-        int count = ssabs(buf, read_len, pattern, matches, MAX_MATCH_COUNT);
+        int count = ssabs((unsigned char *)buf, read_len, pattern, matches, MAX_MATCH_COUNT);
 
         for (int i = 0; i < count; ) {
             int end = matches[i].start;
@@ -75,19 +75,19 @@ int search(int fd, char *buf, char *pattern, matched_line_queue *match_lines)
     return total;
 }
 
-int ssabs(const char *buf, int buf_len, const char *pattern, match *matches, int max_match)
+int ssabs(const unsigned char *buf, int buf_len, const char *pattern, match *matches, int max_match)
 {
     int i, j = 0, m = strlen(pattern);
 
     int match_count = 0;
     int line_no = 1;
     int line_start = 0;
-    char firstCh = pattern[0];
-    char lastCh  = pattern[m - 1];
+    unsigned char firstCh = pattern[0];
+    unsigned char lastCh  = pattern[m - 1];
     char *tbl = get_bad_character_table();
     while (j <= buf_len - m) {
         if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
-            for (i = m - 2; i >= 0 && pattern[i] == buf[j + i]; --i) {
+            for (i = m - 2; i >= 0 && (unsigned char)pattern[i] == buf[j + i]; --i) {
                 if (i <= 0) {
                     // matched
                     matches[match_count].start = j;
@@ -100,7 +100,7 @@ int ssabs(const char *buf, int buf_len, const char *pattern, match *matches, int
                 }
             }
         }
-        int skip = tbl[(unsigned char)buf[j + m]];
+        int skip = tbl[buf[j + m]];
         for (int k = 0; k < skip; k++) {
             int t = buf[j + k];
             if (t == 0x0A || t == 0x0D) {

@@ -16,6 +16,6 @@ typedef struct _match {
 void generate_bad_character_table(char *pattern);
 char *get_bad_character_table();
 int search(int fd, char *buf, char *pattern, matched_line_queue *match_lines);
-int ssabs(const char *buf, int buf_len, const char *pattern, match *matches, int max_match);
+int ssabs(const unsigned char *buf, int buf_len, const char *pattern, match *matches, int max_match);
 
 #endif // _TABLE_H_
