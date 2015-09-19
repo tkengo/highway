@@ -4,7 +4,7 @@
 #include "search.h"
 #include "color.h"
 
-char tbl[TABLE_SIZE];
+static char tbl[TABLE_SIZE];
 
 void generate_bad_character_table(char *pattern)
 {
@@ -15,11 +15,6 @@ void generate_bad_character_table(char *pattern)
     for (i = 0; i < m; ++i) {
         tbl[(unsigned char)pattern[i]] = m - i;
     }
-}
-
-char *get_bad_character_table()
-{
-    return tbl;
 }
 
 int search(int fd, char *buf, char *pattern, matched_line_queue *match_lines)
@@ -85,7 +80,6 @@ int ssabs(const unsigned char *buf, int buf_len, const char *pattern, match *mat
     int line_start = 0;
     unsigned char firstCh = pattern[0];
     unsigned char lastCh  = pattern[m - 1];
-    char *tbl = get_bad_character_table();
     while (j <= buf_len - m) {
         if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
             for (i = m - 2; i >= 0 && (unsigned char)pattern[i] == buf[j + i]; --i) {
