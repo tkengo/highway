@@ -111,7 +111,14 @@ void find_target_files2(file_queue *queue, char *dirname)
     DIR *dir = opendir(dirname);
 
     if (dir == NULL) {
-        log_e("'%s' can't be opend. Is there the directory on your current directory?", dirname);
+        if (access(dirname, F_OK) == 0) {
+            pthread_mutex_lock(&file_mutex);
+            enqueue_file(queue, dirname);
+            pthread_mutex_unlock(&file_mutex);
+            pthread_cond_signal(&file_cond);
+        } else {
+            log_e("'%s' can't be opend. Is there the directory or file on your current directory?", dirname);
+        }
         return;
     }
 
