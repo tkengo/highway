@@ -167,19 +167,19 @@ int main(int argc, char **argv)
     generate_bad_character_table(op.pattern);
 
     search_worker_params params = { queue, op.pattern };
-    const int THREAD_COUNT = 2;
-    pthread_t th[THREAD_COUNT], pth;
-    for (int i = 0; i < THREAD_COUNT; i++) {
+    pthread_t th[op.worker], pth;
+    for (int i = 0; i < op.worker; i++) {
         pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
     }
     pthread_create(&pth, NULL, (void *)print_worker, (void *)queue);
+    log_d("%d threads was launched for searching.", op.worker);
 
     find_target_files2(queue, ".");
 
     complete_file_finding = true;
     pthread_cond_broadcast(&file_cond);
 
-    for (int i = 0; i < THREAD_COUNT; i++) {
+    for (int i = 0; i < op.worker; i++) {
         pthread_join(th[i], NULL);
     }
     pthread_join(pth, NULL);
