@@ -6,6 +6,7 @@ enum log_level {
     LOG_LEVEL_ERROR
 };
 
+void set_log_level(enum log_level l);
 void log_e(const char *fmt, ...);
 void log_d(const char *fmt, ...);
 

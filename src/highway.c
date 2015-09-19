@@ -160,14 +160,14 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    init_option(argc, argv);
+    hw_option op;
+    init_option(argc, argv, &op);
 
     file_queue *queue = create_file_queue();
-    char *pattern = argv[2];
-    generate_bad_character_table(pattern);
+    generate_bad_character_table(op.pattern);
 
-    search_worker_params params = { queue, pattern };
-    const int THREAD_COUNT = atoi(argv[1]);
+    search_worker_params params = { queue, op.pattern };
+    const int THREAD_COUNT = 2;
     pthread_t th[THREAD_COUNT], pth;
     for (int i = 0; i < THREAD_COUNT; i++) {
         pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);

@@ -5,6 +5,11 @@
 
 static enum log_level level = LOG_LEVEL_ERROR;
 
+void set_log_level(enum log_level l)
+{
+    level = l;
+}
+
 void log_e(const char *fmt, ...)
 {
     va_list args;

@@ -1,56 +1,47 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include "help.h"
 #include "highway.h"
+#include "option.h"
+#include "log.h"
+#include "help.h"
 
-void init_option(int argc, char **argv)
+void init_option(int argc, char **argv, hw_option *op)
 {
     bool help = false;
+    static int debug;
 
     static struct option longopts[] = {
-        { "help", no_argument, NULL, 'h' }
+        { "help",  no_argument, NULL,   'h' },
+        { "debug", no_argument, &debug, 1   },
+        { 0,       0,           0,      0   }
     };
 
-    int op;
-    while ((op = getopt_long(argc, argv, "h", longopts, NULL)) != -1) {
-        switch (op) {
+    int ch;
+    while ((ch = getopt_long(argc, argv, "h", longopts, NULL)) != -1) {
+        switch (ch) {
+            case 0:
+                break;
             case 'h':
-                help = true;
-                break;
-            case 'a':
-            case 'b':
-            case 'c':
-                /* getoptの返り値は見付けたオプションである. */
-                break;
-
-            case 'd':
-            case 'e':
-                /* 値を取る引数の場合は外部変数optargにその値を格納する. */
-                break;
-
-                /* 以下二つのcaseは意味がないようだ.
-                   getoptが直接エラーを出力してくれるから.
-                   プログラムを終了するなら意味があるかも知れない */
-            case ':':
-                /* 値を取る引数に値がなかった場合:を返す. */
-                break;
-
-                /* getoptの引数で指定されなかったオプションを受け取ると?を返す. */
-            case '?':
                 usage();
-                exit(1);
+                exit(0);
                 break;
 
+            case '?':
             default:
                 usage();
                 exit(1);
         }
     }
 
-    if (help) {
-        usage();
-        exit(0);
+    if (debug) {
+        set_log_level(LOG_LEVEL_DEBUG);
     }
-    /* getoptはoptindに「次に処理すべき引数のインデクスを格納している. */
-    /* ここではoptindを使用してオプションの値ではない値を処理する. */
+
+    if (argc == optind) {
+        usage();
+        exit(1);
+    }
+
+    op->pattern = argv[optind];
 }
