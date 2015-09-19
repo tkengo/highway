@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include "highway.h"
+#include "search.h"
 
 typedef struct _file_queue file_queue;
 typedef struct _file_queue_node file_queue_node;

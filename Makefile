@@ -12,6 +12,7 @@ SOURCES = \
 		  highway.c \
 		  file.c \
 		  queue.c \
+		  search.c \
 		  log.c
 OBJECTS = $(addprefix $(BUILD_DIR),$(SOURCES:%.c=%.o))
 DEPENDS = $(OBJECTS:%.o=%.d)

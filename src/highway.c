@@ -10,8 +10,8 @@
 #include "file.h"
 #include "queue.h"
 #include "log.h"
+#include "search.h"
 
-#define TABLE_SIZE 256
 #define FILENAME_COLOR "\033[32m"
 #define YELLOW_COLOR "\033[33m"
 #define RED_COLOR "\033[31m"
@@ -20,43 +20,7 @@
 #define RESET_COLOR "\033[49m\033[39m"
 #define N 65535
 
-char tbl[TABLE_SIZE];
 char *pattern = "include";
-
-int search(const char *y, int n, const char *x, match *matches)
-{
-    int i, j = 0, m = strlen(x);
-
-    int count = 0;
-    int line_no = 1;
-    int line_start = 0;
-    char firstCh = x[0];
-    char lastCh  = x[m - 1];
-    while (j <= n - m) {
-        if (lastCh == y[j + m - 1] && firstCh == y[j]) {
-            for (i = m - 2; i >= 0 && x[i] == y[j + i]; --i) {
-                if (i <= 0) {
-                    // matched
-                    matches[count].start = j;
-                    matches[count].line_no = line_no;
-                    matches[count].line_start = line_start;
-                    count++;
-                }
-            }
-        }
-        int skip = tbl[(unsigned char)y[j + m]];
-        for (int k = 0; k < skip; k++) {
-            int t = y[j + k];
-            if (t == 0x0A || t == 0x0D) {
-                line_no++;
-                line_start = j + k + 1;
-            }
-        }
-        j += skip;
-    }
-
-    return count;
-}
 
 file_queue *queue;
 pthread_mutex_t mutex;
@@ -297,13 +261,7 @@ int main(int argc, char **argv)
     queue = create_file_queue();
 
     pattern = argv[2];
-    int i, m = strlen(pattern);
-    for (i = 0; i < TABLE_SIZE; ++i) {
-        tbl[i] = m + 1;
-    }
-    for (i = 0; i < m; ++i) {
-        tbl[pattern[i]] = m - i;
-    }
+    generate_bad_character_table(pattern);
 
     pthread_cond_init(&queue_cond, NULL);
     pthread_cond_init(&print_cond, NULL);
