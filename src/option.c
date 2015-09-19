@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include "common.h"
 #include "highway.h"
 #include "option.h"
 #include "log.h"

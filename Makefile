@@ -12,6 +12,7 @@ SOURCES = \
 		  highway.c \
 		  file.c \
 		  queue.c \
+		  worker.c \
 		  search.c \
 		  log.c \
 		  option.c \
