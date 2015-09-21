@@ -14,8 +14,10 @@ SOURCES = \
 		  queue.c \
 		  worker.c \
 		  search.c \
+		  ignore.c \
 		  log.c \
 		  option.c \
+		  util.c \
 		  help.c
 OBJECTS = $(addprefix $(BUILD_DIR),$(SOURCES:%.c=%.o))
 DEPENDS = $(OBJECTS:%.o=%.d)

@@ -47,7 +47,7 @@ void *print_worker(void *arg)
 
         current = dequeue_string_for_print(queue);
         while (current == NULL || !current->searched) {
-            if (current == NULL && is_complete_file_finding()) {
+            if (current == NULL && is_complete_finding_file()) {
                 pthread_mutex_unlock(&print_mutex);
                 return NULL;
             }
@@ -90,7 +90,7 @@ void *search_worker(void *arg)
         pthread_mutex_lock(&file_mutex);
         current = dequeue_file_for_search(params->queue);
         if (current == NULL) {
-            if (is_complete_file_finding()) {
+            if (is_complete_finding_file()) {
                 pthread_mutex_unlock(&file_mutex);
                 break;
             }

@@ -25,7 +25,7 @@ struct _matched_line_queue {
 #include "search.h"
 
 struct _file_queue_node {
-    char filename[256];
+    char filename[1024];
     int id;
     file_queue_node *next;
     matched_line_queue *match_lines;

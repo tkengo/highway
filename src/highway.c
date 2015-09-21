@@ -10,24 +10,33 @@
 #include "log.h"
 #include "search.h"
 #include "worker.h"
+#include "ignore.h"
+#include "util.h"
 #include "color.h"
 
-static bool complete_file_finding = false;
+static bool complete_finding_file = false;
 
-bool is_complete_file_finding()
+bool is_complete_finding_file()
 {
-    return complete_file_finding;
+    return complete_finding_file;
 }
 
-bool find_target_files(file_queue *queue, char *dirname)
+void enqueue_file_exclusively(file_queue *queue, char *filename)
 {
+    pthread_mutex_lock(&file_mutex);
+    enqueue_file(queue, filename);
+    pthread_mutex_unlock(&file_mutex);
+    pthread_cond_signal(&file_cond);
+}
+
+bool find_target_files(file_queue *queue, char *dirname, ignore_list *ignores)
+{
+    char buf[1024];
+
     DIR *dir = opendir(dirname);
     if (dir == NULL) {
         if (access(dirname, F_OK) == 0) {
-            pthread_mutex_lock(&file_mutex);
-            enqueue_file(queue, dirname);
-            pthread_mutex_unlock(&file_mutex);
-            pthread_cond_signal(&file_cond);
+            enqueue_file_exclusively(queue, dirname);
             return true;
         } else {
             log_e("'%s' can't be opened. Is there the directory or file on your current directory?", dirname);
@@ -35,7 +44,12 @@ bool find_target_files(file_queue *queue, char *dirname)
         }
     }
 
-    char buf[1024];
+    if (ignores == NULL) {
+        sprintf(buf, "%s/%s", dirname, ".gitignore");
+        ignores = create_ignore_list_from_gitignore(buf);
+    }
+
+    int offset = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         if (is_ignore_directory(entry)) {
@@ -43,14 +57,18 @@ bool find_target_files(file_queue *queue, char *dirname)
         }
 
         sprintf(buf, "%s/%s", dirname, entry->d_name);
+        if (buf[0] == '.' && buf[1] == '/') {
+            offset = 2;
+        }
+
+        if (ignores != NULL && is_ignore(ignores, buf + offset)) {
+            continue;
+        }
 
         if (is_directory(entry)) {
-            find_target_files(queue, buf);
+            find_target_files(queue, buf + offset, ignores);
         } else if (is_search_target(entry)) {
-            pthread_mutex_lock(&file_mutex);
-            enqueue_file(queue, buf);
-            pthread_mutex_unlock(&file_mutex);
-            pthread_cond_signal(&file_cond);
+            enqueue_file_exclusively(queue, buf + offset);
         }
     }
 
@@ -80,12 +98,12 @@ int main(int argc, char **argv)
     log_d("%d threads was launched for searching.", op.worker);
 
     for (int i = 0; i < op.patsh_count; i++) {
-        if (!find_target_files(queue, op.root_paths[i])) {
+        if (!find_target_files(queue, op.root_paths[i], NULL)) {
             return_code = 1;
             break;
         }
     }
-    complete_file_finding = true;
+    complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);
     pthread_cond_broadcast(&print_cond);
 
