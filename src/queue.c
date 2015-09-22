@@ -16,10 +16,11 @@ file_queue *create_file_queue()
 file_queue_node *enqueue_file(file_queue *queue, char *filename)
 {
     file_queue_node *node = (file_queue_node *)malloc(sizeof(file_queue_node));
-    node->id   = queue->total++;
-    node->next = NULL;
+    node->id          = queue->total++;
+    node->next        = NULL;
     node->match_lines = NULL;
-    node->searched = false;
+    node->searched    = false;
+    node->matched     = false;
     strcpy(node->filename, filename);
 
     if (queue->first) {

@@ -3,11 +3,12 @@
 
 #include "common.h"
 #include "queue.h"
+#include "option.h"
 
-typedef struct _search_worker_params {
+typedef struct _worker_params {
     file_queue *queue;
-    char *pattern;
-} search_worker_params;
+    hw_option *op;
+} worker_params;
 
 extern pthread_mutex_t file_mutex;
 extern pthread_mutex_t print_mutex;

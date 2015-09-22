@@ -60,7 +60,6 @@ bool is_ignore(ignore_list *list, char *filename)
     while (node) {
         char *index = strstr(filename, node->ignore);
         if (index != NULL) {
-        printf("%s %s %s\n", node->ignore, filename, index);
             if (node->from_root) {
                 return strcmp(filename, node->ignore) == 0;
             } else {

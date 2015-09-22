@@ -39,7 +39,8 @@ bool init_mutex()
 
 void *print_worker(void *arg)
 {
-    file_queue *queue = (file_queue *)arg;
+    worker_params *params = (worker_params *)arg;
+    file_queue *queue = params->queue;
 
     file_queue_node *current;
     while (1) {
@@ -61,17 +62,16 @@ void *print_worker(void *arg)
 
         pthread_mutex_unlock(&print_mutex);
 
-        if (current && current->match_lines) {
-            matched_line_queue_node *match_line;
-            char *filename = current->filename;
-            if (filename[0] == '.' && filename[1] == '/') {
-                filename += 2;
+        if (current && current->matched) {
+            printf("%s%s%s\n", FILENAME_COLOR, current->filename, RESET_COLOR);
+
+            if (!params->op->file_with_matches) {
+                matched_line_queue_node *match_line;
+                while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
+                    printf("%s\n", match_line->line);
+                }
+                printf("\n");
             }
-            printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
-            while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
-                printf("%s\n", match_line->line);
-            }
-            printf("\n");
             free_matched_line_queue(current->match_lines);
         }
     }
@@ -81,11 +81,9 @@ void *print_worker(void *arg)
 
 void *search_worker(void *arg)
 {
-    search_worker_params *params = (search_worker_params *)arg;
+    worker_params *params = (worker_params *)arg;
 
     file_queue_node *current;
-    char *buf = (char *)malloc(sizeof(char) * N);
-
     while (1) {
         pthread_mutex_lock(&file_mutex);
         current = dequeue_file_for_search(params->queue);
@@ -103,9 +101,10 @@ void *search_worker(void *arg)
             int fd = open(current->filename, O_RDONLY);
             if (!is_binary(fd)) {
                 matched_line_queue *match_lines = create_matched_line_queue();
-                int total = search(fd, buf, params->pattern, match_lines);
+                int match_line_count = search(fd, params->op, match_lines);
 
-                if (total > 0) {
+                if (match_line_count > 0) {
+                    current->matched     = true;
                     current->match_lines = match_lines;
                 } else {
                     free_matched_line_queue(match_lines);
@@ -117,8 +116,6 @@ void *search_worker(void *arg)
             close(fd);
         }
     }
-
-    free(buf);
 
     return NULL;
 }

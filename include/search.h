@@ -5,6 +5,8 @@
 #define N 65535
 #define MAX_MATCH_COUNT 100
 
+#include "option.h"
+
 typedef struct _match {
     int start;
     int line_no;
@@ -14,7 +16,7 @@ typedef struct _match {
 #include "queue.h"
 
 void generate_bad_character_table(char *pattern);
-int search(int fd, char *buf, char *pattern, matched_line_queue *match_lines);
+int search(int fd, hw_option *op, matched_line_queue *match_lines);
 int ssabs(const unsigned char *buf, int buf_len, const char *pattern, match *matches, int max_match);
 
 #endif // _TABLE_H_

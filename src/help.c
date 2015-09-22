@@ -20,5 +20,6 @@ void usage()
     u("  hw hoge src/ include/ tmp/test.txt");
     u("");
     u("OPTIONS List:");
-    u("  -h, --help   Show options help and some concept guides.");
+    u("  -l, --file-with-matches  Only print filenames that contain matches.");
+    u("  -h, --help               Show options help and some concept guides.");
 }

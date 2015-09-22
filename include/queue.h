@@ -31,6 +31,7 @@ struct _file_queue_node {
     matched_line_queue *match_lines;
     match *matches;
     bool searched;
+    bool matched;
 };
 
 struct _file_queue {

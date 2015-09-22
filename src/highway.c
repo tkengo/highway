@@ -89,12 +89,12 @@ int main(int argc, char **argv)
     file_queue *queue = create_file_queue();
     generate_bad_character_table(op.pattern);
 
-    search_worker_params params = { queue, op.pattern };
+    worker_params params = { queue, &op };
     pthread_t th[op.worker], pth;
     for (int i = 0; i < op.worker; i++) {
         pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
     }
-    pthread_create(&pth, NULL, (void *)print_worker, (void *)queue);
+    pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
     log_d("%d threads was launched for searching.", op.worker);
 
     for (int i = 0; i < op.patsh_count; i++) {
