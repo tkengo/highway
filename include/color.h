@@ -1,5 +1,5 @@
-#ifndef _COLOR_H_
-#define _COLOR_H_
+#ifndef _HW_COLOR_H_
+#define _HW_COLOR_H_
 
 #define ERROR_COLOR "\033[31m"
 #define FILENAME_COLOR "\033[1m\033[32m"
@@ -16,4 +16,4 @@
 #define MATCH_WORD_ESCAPE_LEN (RESET_COLOR_LEN + RESET_COLOR_LEN)
 #define LINE_NO_ESCAPE_LEN (LINE_NO_COLOR_LEN + RESET_COLOR_LEN)
 
-#endif // _COLOR_H_
+#endif // _HW_COLOR_H_

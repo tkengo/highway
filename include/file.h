@@ -1,5 +1,5 @@
-#ifndef _FILE_H_
-#define _FILE_H_
+#ifndef _HW_FILE_H_
+#define _HW_FILE_H_
 
 #include <dirent.h>
 #include "common.h"
@@ -10,4 +10,4 @@ bool is_ignore_directory(struct dirent *entry);
 bool is_directory(struct dirent *entry);
 bool is_search_target(struct dirent *entry);
 
-#endif // _FILE_H_
+#endif // _HW_FILE_H_

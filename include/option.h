@@ -1,5 +1,5 @@
-#ifndef _OPTION_H_
-#define _OPTION_H_
+#ifndef _HW_OPTION_H_
+#define _HW_OPTION_H_
 
 #include "highway.h"
 #include "common.h"
@@ -15,4 +15,4 @@ typedef struct _hw_option {
 
 void init_option(int argc, char **argv, hw_option *op);
 
-#endif // _OPTION_H_
+#endif // _HW_OPTION_H_

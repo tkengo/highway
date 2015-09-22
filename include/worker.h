@@ -1,5 +1,5 @@
-#ifndef _WORKER_H_
-#define _WORKER_H_
+#ifndef _HW_WORKER_H_
+#define _HW_WORKER_H_
 
 #include "common.h"
 #include "queue.h"
@@ -21,4 +21,4 @@ bool init_mutex();
 void *print_worker(void *arg);
 void *search_worker(void *arg);
 
-#endif // _WORKER_H_
+#endif // _HW_WORKER_H_

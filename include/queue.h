@@ -1,5 +1,5 @@
-#ifndef _FILE_QUEUE_H_
-#define _FILE_QUEUE_H_
+#ifndef _HW_FILE_QUEUE_H_
+#define _HW_FILE_QUEUE_H_
 
 #include <stdlib.h>
 #include "common.h"
@@ -53,4 +53,4 @@ matched_line_queue_node *enqueue_matched_line(matched_line_queue *queue, matched
 matched_line_queue_node *dequeue_matched_line(matched_line_queue *queue);
 void free_matched_line_queue(matched_line_queue *queue);
 
-#endif // _FILE_QUEUE_H_
+#endif // _HW_FILE_QUEUE_H_

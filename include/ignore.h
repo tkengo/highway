@@ -1,5 +1,5 @@
-#ifndef _IGNORE_H_
-#define _IGNORE_H_
+#ifndef _HW_IGNORE_H_
+#define _HW_IGNORE_H_
 
 #include "common.h"
 
@@ -21,4 +21,4 @@ ignore_list *create_ignore_list_from_gitignore(char *ignore);
 ignore_list_node *add_ignore_list(ignore_list *list, char *ignore);
 bool is_ignore(ignore_list *list, char *filename);
 
-#endif // _IGNORE_H_
+#endif // _HW_IGNORE_H_
