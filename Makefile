@@ -27,12 +27,12 @@ TARGET = hw
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(GCC) -I$(INCLUDE) $^ -o $@
+	$(GCC) -O2 -I$(INCLUDE) $^ -o $@
 
 $(BUILD_DIR)%.d: %.c
 	mkdir -p $(BUILD_DIR)
 	$(GCC) -MM -I$(INCLUDE) $< | sed 's,\($*\)\.o[ :]*,$(BUILD_DIR)\1.o: ,g' > $@
-	echo "\t$(GCC) -I$(INCLUDE) -c -o $(subst .d,.o,$@) $$<" >> $@
+	echo "\t$(GCC) -O2 -I$(INCLUDE) -c -o $(subst .d,.o,$@) $$<" >> $@
 
 -include $(DEPENDS)
 
