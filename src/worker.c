@@ -1,10 +1,13 @@
 #include <stdio.h>
+#include <string.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <iconv.h>
 #include <unistd.h>
 #include "worker.h"
 #include "file.h"
 #include "log.h"
+#include "util.h"
 #include "color.h"
 
 pthread_mutex_t file_mutex;
@@ -68,7 +71,19 @@ void *print_worker(void *arg)
             if (!params->op->file_with_matches) {
                 matched_line_queue_node *match_line;
                 while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
-                    printf("%s\n", match_line->line);
+                    if (current->t == FILE_TYPE_UTF8) {
+                        printf("%s\n", match_line->line);
+                    } else {
+                        int line_len = strlen(match_line->line);
+                        const int utf8_len_guess = line_len * 2;
+                        char out[utf8_len_guess];
+                        if (current->t == FILE_TYPE_EUC_JP) {
+                            to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
+                        } else if (current->t == FILE_TYPE_SHIFT_JIS) {
+                            to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
+                        }
+                        printf("%s\n", out);
+                    }
                 }
                 printf("\n");
             }
@@ -82,11 +97,13 @@ void *print_worker(void *arg)
 void *search_worker(void *arg)
 {
     worker_params *params = (worker_params *)arg;
+    hw_option *op = params->op;
+    char *utf8_pattern = op->pattern;
+    const size_t out_len = 1024;
 
-    file_queue_node *current;
     while (1) {
         pthread_mutex_lock(&file_mutex);
-        current = dequeue_file_for_search(params->queue);
+        file_queue_node *current = dequeue_file_for_search(params->queue);
         if (current == NULL) {
             if (is_complete_finding_file()) {
                 pthread_mutex_unlock(&file_mutex);
@@ -99,13 +116,30 @@ void *search_worker(void *arg)
 
         if (current != NULL) {
             int fd = open(current->filename, O_RDONLY);
-            if (!is_binary(fd)) {
+            enum file_type t;
+            if ((t = is_binary(fd)) != FILE_TYPE_BINARY) {
+                char out[out_len + 1], *pattern;
+                if (t == FILE_TYPE_EUC_JP || t == FILE_TYPE_SHIFT_JIS) {
+                    iconv_t ic;
+                    char *ptr_in = op->pattern, *ptr_out = out;
+                    if (t == FILE_TYPE_EUC_JP) {
+                        to_euc(op->pattern, op->pattern_len, out, out_len);
+                    } else if (t == FILE_TYPE_SHIFT_JIS) {
+                        to_sjis(op->pattern, op->pattern_len, out, out_len);
+                    }
+
+                    pattern = out;
+                } else {
+                    pattern = op->pattern;
+                }
+
                 matched_line_queue *match_lines = create_matched_line_queue();
-                int match_line_count = search(fd, params->op, match_lines);
+                int match_line_count = search(fd, pattern, op, t, match_lines);
 
                 if (match_line_count > 0) {
                     current->matched     = true;
                     current->match_lines = match_lines;
+                    current->t           = t;
                 } else {
                     free_matched_line_queue(match_lines);
                 }

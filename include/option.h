@@ -6,7 +6,7 @@
 
 typedef struct _hw_option {
     char *root_paths[MAX_PATHS_COUNT];
-    int patsh_count;
+    int paths_count;
     char *pattern;
     int pattern_len;
     int worker;

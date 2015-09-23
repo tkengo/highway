@@ -5,6 +5,8 @@
 #define N 65536
 #define MAX_MATCH_COUNT 100
 
+enum file_type;
+
 #include "option.h"
 
 typedef struct _match {
@@ -13,9 +15,10 @@ typedef struct _match {
     int line_start;
 } match;
 
+#include "file.h"
 #include "queue.h"
 
-void generate_bad_character_table(char *pattern);
-int search(int fd, hw_option *op, matched_line_queue *match_lines);
+void generate_bad_character_table(const char *pattern, enum file_type t);
+int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines);
 
 #endif // _HW_TABLE_H_

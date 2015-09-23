@@ -23,7 +23,7 @@ void init_option(int argc, char **argv, hw_option *op)
 
     op->worker            = DEFAULT_WORKER;
     op->root_paths[0]     = ".";
-    op->patsh_count       = 1;
+    op->paths_count       = 1;
     op->file_with_matches = false;
 
     int ch;
@@ -73,6 +73,6 @@ void init_option(int argc, char **argv, hw_option *op)
             }
             op->root_paths[i] = path;
         }
-        op->patsh_count = paths_count;
+        op->paths_count = paths_count;
     }
 }

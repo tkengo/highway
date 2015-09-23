@@ -2,32 +2,40 @@
 #include <string.h>
 #include <unistd.h>
 #include "search.h"
+#include "file.h"
 #include "color.h"
 
-static char tbl[TABLE_SIZE];
+static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
+static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
 
-void generate_bad_character_table(char *pattern)
+void generate_bad_character_table(const char *pattern, enum file_type t)
 {
+    if (tbl_created[t]) {
+        return;
+    }
+
     int i, m = strlen(pattern);
     for (i = 0; i < TABLE_SIZE; ++i) {
-        tbl[i] = m + 1;
+        tbl[t][i] = m + 1;
     }
     for (i = 0; i < m; ++i) {
-        tbl[(unsigned char)pattern[i]] = m - i;
+        tbl[t][(unsigned char)pattern[i]] = m - i;
     }
+
+    tbl_created[t] = true;
 }
 
 /**
  * A fast pattern matching algorithm.
  * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
  */
-int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const hw_option *op, match *matches, int max_match, int *last_line_start, int *last_line_no)
+int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char *pattern, match *matches, int max_match, enum file_type t, int *last_line_start, int *last_line_no)
 {
-    int i, j = 0, m = op->pattern_len;
+    int i, j = 0, m = strlen(pattern);
     int match_count = 0;
     int line_no = line_no_offset;
     int line_start = 0;
-    unsigned char *p = (unsigned char *)op->pattern;
+    unsigned char *p = (unsigned char *)pattern;
     unsigned char firstCh = p[0];
     unsigned char lastCh  = p[m - 1];
 
@@ -46,7 +54,7 @@ int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const hw_op
                 }
             }
         }
-        int skip = tbl[buf[j + m]];
+        int skip = tbl[t][buf[j + m]];
         for (int k = 0; k < skip; k++) {
             unsigned char t = buf[j + k];
             if (t == 0x0A || t == 0x0D) {
@@ -71,9 +79,10 @@ int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const hw_op
     return match_count;
 }
 
-int format(const char *buf, const match *matches, int match_count, int read_len, const hw_option *op, matched_line_queue *match_lines)
+int format(const char *buf, const match *matches, int match_count, int read_len, const char *pattern, const hw_option *op, matched_line_queue *match_lines)
 {
     int match_line_count = 0;
+    int m = strlen(pattern);
 
     for (int i = 0; i < match_count; ) {
         // Find the end of the line.
@@ -84,7 +93,7 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
         // escape sequence length in order to be coloring result.
         int line_start = matches[i].line_start;
         int line_len   = line_end - line_start + 1;
-        int buffer_len = line_len + LINE_NO_ESCAPE_LEN + 10 + MATCH_WORD_ESCAPE_LEN * (line_len / op->pattern_len);
+        int buffer_len = line_len + LINE_NO_ESCAPE_LEN + 10 + MATCH_WORD_ESCAPE_LEN * (line_len / m);
 
         // Generate new node represented matched line.
         matched_line_queue_node *node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
@@ -118,10 +127,10 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
 
                 char *prefix = (char *)malloc(sizeof(char) * prefix_length);
                 strlcpy(prefix, buf + print_start, prefix_length);
-                sprintf(node->line + strlen(node->line), "%s%s%s%s", prefix, MATCH_WORD_COLOR, op->pattern, RESET_COLOR);
+                sprintf(node->line + strlen(node->line), "%s%s%s%s", prefix, MATCH_WORD_COLOR, pattern, RESET_COLOR);
                 free(prefix);
 
-                print_start = match_start + op->pattern_len;
+                print_start = match_start + m;
             }
 
             i++;
@@ -153,11 +162,13 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
  * @param op The pattern string is included this struct.
  * @return The count of the matched lines.
  */
-int search(int fd, hw_option *op, matched_line_queue *match_lines)
+int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines)
 {
     int n = N;
     int read_len, last_line_start, line_no_offset = 1, match_line_count = 0, read_bytes = 0;
     char *buf = (char *)malloc(sizeof(char) * n);
+
+    generate_bad_character_table(pattern, t);
 
     // Read every N(65536) bytes until reach to EOF. This method is efficient for memory if file
     // size is very large. And maybe, almost source code files falls within 65536 bytes, so almost
@@ -172,9 +183,10 @@ int search(int fd, hw_option *op, matched_line_queue *match_lines)
             (unsigned char *)buf,
             read_len,
             line_no_offset,
-            op,
+            pattern,
             matches,
             MAX_MATCH_COUNT,
+            t,
             &last_line_start,
             &line_no_offset
         );
@@ -194,7 +206,7 @@ int search(int fd, hw_option *op, matched_line_queue *match_lines)
         }
 
         // Format search results.
-        match_line_count += format(buf, matches, match_count, read_len, op, match_lines);
+        match_line_count += format(buf, matches, match_count, read_len, pattern, op, match_lines);
 
         if (eof) {
             break;

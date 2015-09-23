@@ -7,7 +7,8 @@ GCC = gcc
 .PHONY: clean
 
 BUILD_DIR = tmp/build/
-INCLUDE = include
+INCLUDE = -Iinclude
+LIB = -liconv
 SOURCES = \
 		  highway.c \
 		  file.c \
@@ -27,12 +28,12 @@ TARGET = hw
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(GCC) -O2 -I$(INCLUDE) $^ -o $@
+	$(GCC) -O2 $(INCLUDE) $(LIB) $^ -o $@
 
 $(BUILD_DIR)%.d: %.c
 	mkdir -p $(BUILD_DIR)
-	$(GCC) -MM -I$(INCLUDE) $< | sed 's,\($*\)\.o[ :]*,$(BUILD_DIR)\1.o: ,g' > $@
-	echo "\t$(GCC) -O2 -I$(INCLUDE) -c -o $(subst .d,.o,$@) $$<" >> $@
+	$(GCC) -MM $(INCLUDE) $< | sed 's,\($*\)\.o[ :]*,$(BUILD_DIR)\1.o: ,g' > $@
+	echo "\t$(GCC) -O2 $(INCLUDE) -c -o $(subst .d,.o,$@) $$<" >> $@
 
 -include $(DEPENDS)
 

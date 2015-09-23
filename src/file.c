@@ -10,27 +10,24 @@
 /**
  * Check if the filename is a binary file.
  */
-bool is_binary(int fd)
+enum file_type is_binary(int fd)
 {
     // Read the file content only 512-bytes from the header in order to improve speed of the
     // encoding detection. The detection accuracy of this method is not perfect but fast.
-    const int BUF_SIZE = 512;
-    char buf[BUF_SIZE];
-    /* FILE *fp = fopen(filename, "rb"); */
-    /* int actualBufSize = fread(buf, sizeof(char), actualBufSize, fp); */
-    /* fclose(fp); */
+    char buf[BUF_SIZE_FOR_FILE_TYPE_CHECK];
 
-    int actualBufSize = read(fd, buf, BUF_SIZE);
-    if (actualBufSize == 0) {
-        return true;
+    int read_bytes = read(fd, buf, BUF_SIZE_FOR_FILE_TYPE_CHECK);
+    if (read_bytes == 0) {
+        return FILE_TYPE_BINARY;
     }
     lseek(fd, 0, SEEK_SET);
 
-    int unknownCharacter = 0;
-    for (int i = 0; i < actualBufSize; i++) {
+    int unknown = 0, utf8 = 0, euc = 0, sjis = 0;
+    for (int i = 0; i < read_bytes; i++) {
         unsigned char c1 = (unsigned char)buf[i];
         if (c1 == 0x00) {
-            return true;
+            // NULL character. This is a binary file.
+            return FILE_TYPE_BINARY;
         } else {
             // ASCII detection.
             if (c1 == 0x09 || /* Horizontal tab  */
@@ -40,51 +37,85 @@ bool is_binary(int fd)
                 continue;
             }
 
-            // 2-byte character detection.
+            // half-byte character detection. This is Shift-JIS encoding.
+            if (0xA1 <= c1 && c1 <= 0xDF) {
+                sjis++;
+                continue;
+            }
+
+            // 2-byte character detection. Shift-JIS or EUC-JP or UTF-8.
             unsigned char c2;
-            if (i + 1 < actualBufSize) {
+            if (i + 1 < read_bytes) {
                 i++;
                 c2 = (unsigned char)buf[i];
                 if (0xC2 <= c1 && c1 <= 0xDF &&
                     0x80 <= c2 && c2 <= 0xBF) {
+                    utf8++;
+                    continue;
+                }
+
+                if ((c1 == 0x8E) &&
+                    (0xA1 <= c2 && c2 <= 0xDF)) {
+                    euc++;
+                    continue;
+                }
+
+                if ((0xA1 <= c1 && c1 <= 0xFE) &&
+                    (0xA1 <= c2 && c2 <= 0xFE)) {
+                    euc++;
+                    continue;
+                }
+
+                if (((0x81 <= c1 && c1 <= 0x9F) || (0xE0 <= c1 && c1 <= 0xEF)) &&
+                    ((0x40 <= c2 && c2 <= 0x7E) || (0x80 <= c2 && c2 <= 0xFC))) {
+                    sjis++;
                     continue;
                 }
             }
 
-            // 3-byte character detection.
+            // 3-byte character detection. Only UTF-8.
             unsigned char c3;
-            if (i + 1 < actualBufSize) {
+            if (i + 1 < read_bytes) {
                 i++;
                 c3 = (unsigned char)buf[i];
                 if ((c1 == 0xE0) &&
                     (0xA0 <= c2 && c2 <= 0xBF) &&
                     (0x80 <= c3 && c3 <= 0xBF)) {
+                    utf8++;
                     continue;
                 }
 
                 if (((0xe1 <= c1 && c1 <= 0xec) || c1 == 0xee || c1 == 0xef) &&
                     ( 0x80 <= c2 && c2 <= 0xbf) &&
                     ( 0x80 <= c3 && c3 <= 0xbf)) {
+                    utf8++;
                     continue;
                 }
 
                 if ((c1 == 0xed) &&
                     (0x80 <= c2 && c2 <= 0x9f) &&
                     (0x80 <= c3 && c3 <= 0xbf)) {
+                    utf8++;
                     continue;
                 }
             }
 
-            // unknown character.
-            unknownCharacter++;
+            // Unknown character.
+            unknown++;
         }
     }
 
-    if (unknownCharacter * 100 / actualBufSize > 10) {
-        return true;
+    if (unknown * 100 / read_bytes > 10) {
+        return FILE_TYPE_BINARY;
+    } else if (utf8 >= euc && utf8 >= sjis) {
+        return FILE_TYPE_UTF8;
+    } else if (euc >= utf8 && euc >= sjis) {
+        return FILE_TYPE_EUC_JP;
+    } else if (sjis >= utf8 && sjis >= euc) {
+        return FILE_TYPE_SHIFT_JIS;
+    } else {
+        return FILE_TYPE_UTF8;
     }
-
-    return false;
 }
 
 /**
@@ -96,9 +127,8 @@ bool is_ignore_directory(struct dirent *entry)
     bool cur = entry->d_type == DT_DIR && entry->d_namlen == 1 && entry->d_name[0] == '.';
     bool up  = entry->d_type == DT_DIR && entry->d_namlen == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool git = entry->d_type == DT_DIR && strcmp(entry->d_name, ".git") == 0;
-    bool vendor = entry->d_type == DT_DIR && strcmp(entry->d_name, "vendor") == 0;
 
-    return cur || up || git || vendor;
+    return cur || up || git;
 }
 
 bool is_directory(struct dirent *entry)
@@ -110,24 +140,3 @@ bool is_search_target(struct dirent *entry)
 {
     return entry->d_type == DT_REG || entry->d_type == DT_LNK;
 }
-
-/* void find_target_files(file_queue *queue, char *dirname) */
-/* { */
-/*     DIR *dir = opendir(dirname); */
-/*     struct dirent *entry; */
-/*     while ((entry = readdir(dir)) != NULL) { */
-/*         if (is_ignore_directory(entry)) { */
-/*             continue; */
-/*         } */
-/*  */
-/*         char buf[256]; */
-/*         sprintf(buf, "%s/%s", dirname, entry->d_name); */
-/*  */
-/*         if (is_directory(entry)) { */
-/*             find_target_files(queue, buf); */
-/*         } else if (is_search_target(entry)) { */
-/*             enqueue_file(queue, buf); */
-/*         } */
-/*     } */
-/*     closedir(dir); */
-/* } */

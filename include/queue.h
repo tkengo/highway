@@ -32,6 +32,7 @@ struct _file_queue_node {
     match *matches;
     bool searched;
     bool matched;
+    enum file_type t;
 };
 
 struct _file_queue {

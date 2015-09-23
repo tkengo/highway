@@ -76,19 +76,22 @@ bool find_target_files(file_queue *queue, char *dirname, ignore_list *ignores)
     return true;
 }
 
+/**
+ * Entry point.
+ */
 int main(int argc, char **argv)
 {
+    int return_code = 0;
+    hw_option op;
+
     if (!init_mutex()) {
         return 1;
     }
 
-    int return_code = 0;
-    hw_option op;
     init_option(argc, argv, &op);
+    init_iconv();
 
     file_queue *queue = create_file_queue();
-    generate_bad_character_table(op.pattern);
-
     worker_params params = { queue, &op };
     pthread_t th[op.worker], pth;
     for (int i = 0; i < op.worker; i++) {
@@ -97,7 +100,7 @@ int main(int argc, char **argv)
     pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
     log_d("%d threads was launched for searching.", op.worker);
 
-    for (int i = 0; i < op.patsh_count; i++) {
+    for (int i = 0; i < op.paths_count; i++) {
         if (!find_target_files(queue, op.root_paths[i], NULL)) {
             return_code = 1;
             break;
@@ -116,6 +119,8 @@ int main(int argc, char **argv)
     pthread_mutex_destroy(&print_mutex);
     pthread_cond_destroy(&file_cond);
     pthread_cond_destroy(&print_cond);
+    free_file_queue(queue);
+    close_iconv();
 
     return return_code;
 }
