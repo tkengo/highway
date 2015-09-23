@@ -2,7 +2,7 @@
 #define _HW_TABLE_H_
 
 #define TABLE_SIZE 256
-#define N 65535
+#define N 65536
 #define MAX_MATCH_COUNT 100
 
 #include "option.h"
@@ -17,6 +17,5 @@ typedef struct _match {
 
 void generate_bad_character_table(char *pattern);
 int search(int fd, hw_option *op, matched_line_queue *match_lines);
-int ssabs(const unsigned char *buf, int buf_len, const char *pattern, match *matches, int max_match);
 
 #endif // _HW_TABLE_H_
