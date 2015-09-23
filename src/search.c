@@ -17,18 +17,23 @@ void generate_bad_character_table(char *pattern)
     }
 }
 
-int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char *pattern, match *matches, int max_match, int *last_line_start, int *last_line_no)
+/**
+ * A fast pattern matching algorithm.
+ * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
+ */
+int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const hw_option *op, match *matches, int max_match, int *last_line_start, int *last_line_no)
 {
-    int i, j = 0, m = strlen(pattern);
-
+    int i, j = 0, m = op->pattern_len;
     int match_count = 0;
     int line_no = line_no_offset;
     int line_start = 0;
-    unsigned char firstCh = pattern[0];
-    unsigned char lastCh  = pattern[m - 1];
+    unsigned char *p = (unsigned char *)op->pattern;
+    unsigned char firstCh = p[0];
+    unsigned char lastCh  = p[m - 1];
+
     while (j <= buf_len - m) {
         if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
-            for (i = m - 2; i >= 0 && (unsigned char)pattern[i] == buf[j + i]; --i) {
+            for (i = m - 2; i >= 0 && p[i] == buf[j + i]; --i) {
                 if (i <= 0) {
                     // matched
                     matches[match_count].start = j;
@@ -141,8 +146,8 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
 }
 
 /**
- * Search the pattern from the file descriptor. Add match lines to the queue if the pattern was
- * matched on the read buffer.
+ * Search the pattern from the file descriptor and add formatted matched lines to the queue if the
+ * pattern was matched on the read buffer.
  *
  * @param fd File descriptor. The search buffer was read from this fd.
  * @param op The pattern string is included this struct.
@@ -158,7 +163,7 @@ int search(int fd, hw_option *op, matched_line_queue *match_lines)
     // size is very large. And maybe, almost source code files falls within 65536 bytes, so almost
     // files finishes 1 time read.
     while ((read_len = read(fd, buf, n)) > 0) {
-        // Check if pointer was reached the end of the file.
+        // Check if pointer was reached to the end of the file.
         bool eof = read_len < n;
 
         // Using SSABS pattern matching algorithm.
@@ -167,7 +172,7 @@ int search(int fd, hw_option *op, matched_line_queue *match_lines)
             (unsigned char *)buf,
             read_len,
             line_no_offset,
-            op->pattern,
+            op,
             matches,
             MAX_MATCH_COUNT,
             &last_line_start,
@@ -175,6 +180,8 @@ int search(int fd, hw_option *op, matched_line_queue *match_lines)
         );
 
         if (!eof) {
+            // If there is too long line over 65536 bytes, reallocate the twice memory for the
+            // current buffer, then search again.
             if (last_line_start == 0) {
                 n *= 2;
                 buf = (char *)realloc(buf, sizeof(char) * n);
@@ -186,12 +193,16 @@ int search(int fd, hw_option *op, matched_line_queue *match_lines)
             }
         }
 
+        // Format search results.
         match_line_count += format(buf, matches, match_count, read_len, op, match_lines);
 
         if (eof) {
             break;
         }
 
+        // If we can't read the contents from the file one time, we should read from the position
+        // of the head of the last line in the next iteration because the contents may break up.
+        // So the file pointer will be seeked to it, then the next iteration starts from there.
         read_bytes += last_line_start;
         lseek(fd, read_bytes, SEEK_SET);
     }
