@@ -25,9 +25,10 @@ void init_option(int argc, char **argv, hw_option *op)
     op->root_paths[0]     = ".";
     op->paths_count       = 1;
     op->file_with_matches = false;
+    op->use_regex         = false;
 
     int ch;
-    while ((ch = getopt_long(argc, argv, "hl", longopts, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "ehl", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -40,12 +41,16 @@ void init_option(int argc, char **argv, hw_option *op)
                 }
                 break;
 
-            case 'h':
+            case 'e': /* Use regular expression */
+                op->use_regex = true;
+                break;
+
+            case 'h': /* Show help */
                 usage();
                 exit(0);
                 break;
 
-            case 'l':
+            case 'l': /* Show only filenames */
                 op->file_with_matches = true;
                 break;
 

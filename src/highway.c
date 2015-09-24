@@ -13,6 +13,7 @@
 #include "ignore.h"
 #include "util.h"
 #include "color.h"
+#include "oniguruma.h"
 
 static bool complete_finding_file = false;
 
@@ -91,6 +92,10 @@ int main(int argc, char **argv)
     init_option(argc, argv, &op);
     init_iconv();
 
+    if (op.use_regex) {
+        onig_init();
+    }
+
     file_queue *queue = create_file_queue();
     worker_params params = { queue, &op };
     pthread_t th[op.worker], pth;
@@ -121,6 +126,10 @@ int main(int argc, char **argv)
     pthread_cond_destroy(&print_cond);
     free_file_queue(queue);
     close_iconv();
+
+    if (op.use_regex) {
+        onig_end();
+    }
 
     return return_code;
 }

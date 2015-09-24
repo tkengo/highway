@@ -77,6 +77,7 @@ void *print_worker(void *arg)
                         int line_len = strlen(match_line->line);
                         const int utf8_len_guess = line_len * 2;
                         char out[utf8_len_guess];
+                        memset(out, 0, utf8_len_guess);
                         if (current->t == FILE_TYPE_EUC_JP) {
                             to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
                         } else if (current->t == FILE_TYPE_SHIFT_JIS) {
@@ -94,17 +95,22 @@ void *print_worker(void *arg)
     return NULL;
 }
 
+/**
+ * Search worker. This method was invoked on threads launched from `main`.
+ */
 void *search_worker(void *arg)
 {
+    enum file_type t;
     worker_params *params = (worker_params *)arg;
-    hw_option *op = params->op;
-    char *utf8_pattern = op->pattern;
     const size_t out_len = 1024;
 
     while (1) {
+        // This worker takes out a search target file from the queue. If the queue is empty, worker
+        // will be waiting until find at least one target file.
         pthread_mutex_lock(&file_mutex);
         file_queue_node *current = dequeue_file_for_search(params->queue);
         if (current == NULL) {
+            // Break this loop if all files was searched.
             if (is_complete_finding_file()) {
                 pthread_mutex_unlock(&file_mutex);
                 break;
@@ -114,41 +120,49 @@ void *search_worker(void *arg)
         }
         pthread_mutex_unlock(&file_mutex);
 
-        if (current != NULL) {
-            int fd = open(current->filename, O_RDONLY);
-            enum file_type t;
-            if ((t = is_binary(fd)) != FILE_TYPE_BINARY) {
-                char out[out_len + 1], *pattern;
-                if (t == FILE_TYPE_EUC_JP || t == FILE_TYPE_SHIFT_JIS) {
-                    iconv_t ic;
-                    char *ptr_in = op->pattern, *ptr_out = out;
-                    if (t == FILE_TYPE_EUC_JP) {
-                        to_euc(op->pattern, op->pattern_len, out, out_len);
-                    } else if (t == FILE_TYPE_SHIFT_JIS) {
-                        to_sjis(op->pattern, op->pattern_len, out, out_len);
-                    }
+        if (current == NULL) {
+            continue;
+        }
 
-                    pattern = out;
-                } else {
-                    pattern = op->pattern;
+        // Check file type of the target file, then if it is a binary, we skip it.
+        int fd = open(current->filename, O_RDONLY);
+        if ((t = is_binary(fd)) != FILE_TYPE_BINARY) {
+            char *pattern = params->op->pattern;
+
+            // Convert the pattern to appropriate encoding if an encoding of the target file is
+            // not UTF-8.
+            char out[out_len + 1];
+            if (t == FILE_TYPE_EUC_JP || t == FILE_TYPE_SHIFT_JIS) {
+                if (t == FILE_TYPE_EUC_JP) {
+                    to_euc(params->op->pattern, params->op->pattern_len, out, out_len);
+                } else if (t == FILE_TYPE_SHIFT_JIS) {
+                    to_sjis(params->op->pattern, params->op->pattern_len, out, out_len);
                 }
-
-                matched_line_queue *match_lines = create_matched_line_queue();
-                int match_line_count = search(fd, pattern, op, t, match_lines);
-
-                if (match_line_count > 0) {
-                    current->matched     = true;
-                    current->match_lines = match_lines;
-                    current->t           = t;
-                } else {
-                    free_matched_line_queue(match_lines);
-                }
+                pattern = out;
             }
 
-            current->searched = true;
-            pthread_cond_signal(&print_cond);
-            close(fd);
+            // Searching.
+            matched_line_queue *match_lines = create_matched_line_queue();
+            int match_line_count = search(fd, pattern, params->op, t, match_lines);
+
+            if (match_line_count > 0) {
+                // Set additional data to the queue data because it will be used on print worker in
+                // order to print results to the console. `match_lines` variable will be released
+                // along with the file queue when it is released.
+                current->matched     = true;
+                current->match_lines = match_lines;
+                current->t           = t;
+            } else {
+                // If the pattern was not matched, the lines queue is no longer needed, so do free.
+                free_matched_line_queue(match_lines);
+            }
         }
+
+        // Launch print worker.
+        current->searched = true;
+        pthread_cond_signal(&print_cond);
+
+        close(fd);
     }
 
     return NULL;

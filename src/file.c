@@ -37,13 +37,7 @@ enum file_type is_binary(int fd)
                 continue;
             }
 
-            // half-byte character detection. This is Shift-JIS encoding.
-            if (0xA1 <= c1 && c1 <= 0xDF) {
-                sjis++;
-                continue;
-            }
-
-            // 2-byte character detection. Shift-JIS or EUC-JP or UTF-8.
+            // 2-byte character detection for UTF-8.
             unsigned char c2;
             if (i + 1 < read_bytes) {
                 i++;
@@ -51,24 +45,6 @@ enum file_type is_binary(int fd)
                 if (0xC2 <= c1 && c1 <= 0xDF &&
                     0x80 <= c2 && c2 <= 0xBF) {
                     utf8++;
-                    continue;
-                }
-
-                if ((c1 == 0x8E) &&
-                    (0xA1 <= c2 && c2 <= 0xDF)) {
-                    euc++;
-                    continue;
-                }
-
-                if ((0xA1 <= c1 && c1 <= 0xFE) &&
-                    (0xA1 <= c2 && c2 <= 0xFE)) {
-                    euc++;
-                    continue;
-                }
-
-                if (((0x81 <= c1 && c1 <= 0x9F) || (0xE0 <= c1 && c1 <= 0xEF)) &&
-                    ((0x40 <= c2 && c2 <= 0x7E) || (0x80 <= c2 && c2 <= 0xFC))) {
-                    sjis++;
                     continue;
                 }
             }
@@ -98,6 +74,33 @@ enum file_type is_binary(int fd)
                     utf8++;
                     continue;
                 }
+            }
+
+            // 2-byte character detection for EUC-JP or SHIFT_JIS.
+            if (i + 1 < read_bytes) {
+                if ((c1 == 0x8E) &&
+                    (0xA1 <= c2 && c2 <= 0xDF)) {
+                    euc++;
+                    continue;
+                }
+
+                if ((0xA1 <= c1 && c1 <= 0xFE) &&
+                    (0xA1 <= c2 && c2 <= 0xFE)) {
+                    euc++;
+                    continue;
+                }
+
+                if (((0x81 <= c1 && c1 <= 0x9F) || (0xE0 <= c1 && c1 <= 0xEF)) &&
+                    ((0x40 <= c2 && c2 <= 0x7E) || (0x80 <= c2 && c2 <= 0xFC))) {
+                    sjis++;
+                    continue;
+                }
+            }
+
+            // half-byte character detection. This is Shift-JIS encoding.
+            if (0xA1 <= c1 && c1 <= 0xDF) {
+                sjis++;
+                continue;
             }
 
             // Unknown character.

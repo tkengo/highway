@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "oniguruma.h"
 #include "search.h"
 #include "file.h"
 #include "color.h"
@@ -79,6 +80,9 @@ int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char 
     return match_count;
 }
 
+/**
+ * Format search results. This method does formatting results every line and colorize results.
+ */
 int format(const char *buf, const match *matches, int match_count, int read_len, const char *pattern, const hw_option *op, matched_line_queue *match_lines)
 {
     int match_line_count = 0;
@@ -155,6 +159,77 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
 }
 
 /**
+ * Search the pattern as a regular expression.
+ */
+int regex(const unsigned char *buf, int read_len, const char *pattern, enum file_type t, match *matches, int max_match, int *last_line_start)
+{
+    regex_t *reg;
+    OnigErrorInfo einfo;
+    OnigEncodingType *enc;
+    UChar *p = (UChar *)pattern;
+
+    switch (t) {
+        case FILE_TYPE_EUC_JP:
+            enc = ONIG_ENCODING_EUC_JP;
+            break;
+        case FILE_TYPE_SHIFT_JIS:
+            enc = ONIG_ENCODING_SJIS;
+            break;
+        default:
+            enc = ONIG_ENCODING_UTF8;
+            break;
+    }
+    int r = onig_new(&reg, p, p + strlen((char *)p), ONIG_OPTION_DEFAULT, enc, ONIG_SYNTAX_DEFAULT, &einfo);
+    if (r != ONIG_NORMAL) {
+        return 0;
+    }
+
+    OnigRegion *region = onig_region_new();
+
+    int match_count = 0;
+    int i = 0, line_start = 0, line_no = 1;
+    while (i < read_len) {
+        if (buf[i] == 0x0A || buf[i] == 0x0D) {
+            // Skip if current line has no contents.
+            if (i != line_start) {
+                int pos = 0;
+                while (1) {
+                    const unsigned char *start = buf + line_start + pos,
+                          *end   = buf + i,
+                          *range = end;
+                    r = onig_search(reg, buf, end, start, range, region, ONIG_OPTION_NONE);
+                    if (r >= 0) {
+                        matches[match_count].start      = region->beg[0];
+                        matches[match_count].line_no    = line_no;
+                        matches[match_count].line_start = line_start;
+                        match_count++;
+
+                        if (i <= region->end[0]) {
+                            break;
+                        }
+                        pos += region->end[0] - line_start;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            line_start = i + 1;
+            line_no++;
+        }
+
+        i++;
+    }
+
+    onig_region_free(region, 1);
+    onig_free(reg);
+
+    *last_line_start = line_start;
+
+    return match_count;
+}
+
+/**
  * Search the pattern from the file descriptor and add formatted matched lines to the queue if the
  * pattern was matched on the read buffer.
  *
@@ -177,19 +252,33 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
         // Check if pointer was reached to the end of the file.
         bool eof = read_len < n;
 
-        // Using SSABS pattern matching algorithm.
+        int match_count;
         match matches[MAX_MATCH_COUNT];
-        int match_count = ssabs(
-            (unsigned char *)buf,
-            read_len,
-            line_no_offset,
-            pattern,
-            matches,
-            MAX_MATCH_COUNT,
-            t,
-            &last_line_start,
-            &line_no_offset
-        );
+        if (op->use_regex) {
+            // Using a regular expression.
+            match_count = regex(
+                (unsigned char *)buf,
+                read_len,
+                pattern,
+                t,
+                matches,
+                MAX_MATCH_COUNT,
+                &last_line_start
+            );
+        } else {
+            // Using SSABS pattern matching algorithm.
+            match_count = ssabs(
+                (unsigned char *)buf,
+                read_len,
+                line_no_offset,
+                pattern,
+                matches,
+                MAX_MATCH_COUNT,
+                t,
+                &last_line_start,
+                &line_no_offset
+            );
+        }
 
         if (!eof) {
             // If there is too long line over 65536 bytes, reallocate the twice memory for the

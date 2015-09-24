@@ -1,0 +1,32 @@
+language: c
+
+compiler:
+        - gcc
+        - clang
+
+env:
+        - CFLAGS=--coverage CONFOPT=
+        - CFLAGS=--coverage CONFOPT=--enable-multithread
+
+sudo: false
+
+addons:
+        apt:
+                packages:
+                        - lcov
+
+before_install:
+        - gem install lcoveralls
+
+before_script:
+        - ./configure $CONFOPT && make
+
+script:
+        - make pytest
+        - make atest
+        - ./sample/crnl
+        - make -C sample test
+
+after_success:
+        - lcov -c -d .libs -o coverage.info
+        - lcoveralls --retry-count 5 coverage.info
