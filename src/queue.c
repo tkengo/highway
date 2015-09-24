@@ -43,7 +43,7 @@ file_queue_node *enqueue_file(file_queue *queue, const char *filename)
     return node;
 }
 
-file_queue_node *dequeue_file_for_search(file_queue *queue)
+file_queue_node *peek_file_for_search(file_queue *queue)
 {
     if (queue->current_for_search) {
         file_queue_node *current_for_search = queue->current_for_search;
@@ -54,7 +54,7 @@ file_queue_node *dequeue_file_for_search(file_queue *queue)
     }
 }
 
-file_queue_node *dequeue_string_for_print(file_queue *queue)
+file_queue_node *peek_file_for_print(file_queue *queue)
 {
     if (queue->current_for_print) {
         file_queue_node *current_for_print = queue->current_for_print;

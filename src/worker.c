@@ -45,11 +45,10 @@ void *print_worker(void *arg)
     worker_params *params = (worker_params *)arg;
     file_queue *queue = params->queue;
 
-    file_queue_node *current;
     while (1) {
         pthread_mutex_lock(&print_mutex);
 
-        current = dequeue_string_for_print(queue);
+        file_queue_node *current = peek_file_for_print(queue);
         while (current == NULL || !current->searched) {
             if (current == NULL && is_complete_finding_file()) {
                 pthread_mutex_unlock(&print_mutex);
@@ -59,7 +58,7 @@ void *print_worker(void *arg)
             pthread_cond_wait(&print_cond, &print_mutex);
 
             if (current == NULL) {
-                current = dequeue_string_for_print(queue);
+                current = peek_file_for_print(queue);
             }
         }
 
@@ -112,7 +111,7 @@ void *search_worker(void *arg)
         // This worker takes out a search target file from the queue. If the queue is empty, worker
         // will be waiting until find at least one target file.
         pthread_mutex_lock(&file_mutex);
-        file_queue_node *current = dequeue_file_for_search(params->queue);
+        file_queue_node *current = peek_file_for_search(params->queue);
         if (current == NULL) {
             // Break this loop if all files was searched.
             if (is_complete_finding_file()) {
@@ -120,7 +119,7 @@ void *search_worker(void *arg)
                 break;
             }
             pthread_cond_wait(&file_cond, &file_mutex);
-            current = dequeue_file_for_search(params->queue);
+            current = peek_file_for_search(params->queue);
         }
         pthread_mutex_unlock(&file_mutex);
 
