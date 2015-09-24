@@ -40,6 +40,14 @@ bool init_mutex()
     return true;
 }
 
+void destroy_mutex()
+{
+    pthread_mutex_destroy(&file_mutex);
+    pthread_mutex_destroy(&print_mutex);
+    pthread_cond_destroy(&file_cond);
+    pthread_cond_destroy(&print_cond);
+}
+
 void *print_worker(void *arg)
 {
     worker_params *params = (worker_params *)arg;

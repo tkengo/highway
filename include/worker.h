@@ -18,6 +18,7 @@ extern pthread_cond_t print_cond;
 extern bool is_complete_finding_file();
 
 bool init_mutex();
+void destroy_mutex();
 void *print_worker(void *arg);
 void *search_worker(void *arg);
 
