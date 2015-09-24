@@ -1,9 +1,6 @@
 #include <stdio.h>
 
-void u(char *p)
-{
-    printf("%s\n", p);
-}
+#define u(p) printf("%s\n", p);
 
 void usage()
 {
@@ -20,6 +17,8 @@ void usage()
     u("  hw hoge src/ include/ tmp/test.txt");
     u("");
     u("OPTIONS List:");
+    u("  -e                       Parse PATTERN as a regular expression.");
     u("  -l, --file-with-matches  Only print filenames that contain matches.");
+    u("");
     u("  -h, --help               Show options help and some concept guides.");
 }

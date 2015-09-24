@@ -13,7 +13,7 @@ file_queue *create_file_queue()
     return queue;
 }
 
-file_queue_node *enqueue_file(file_queue *queue, char *filename)
+file_queue_node *enqueue_file(file_queue *queue, const char *filename)
 {
     file_queue_node *node = (file_queue_node *)malloc(sizeof(file_queue_node));
     node->id          = queue->total++;

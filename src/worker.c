@@ -66,7 +66,11 @@ void *print_worker(void *arg)
         pthread_mutex_unlock(&print_mutex);
 
         if (current && current->matched) {
-            printf("%s%s%s\n", FILENAME_COLOR, current->filename, RESET_COLOR);
+            const char *filename = current->filename;
+            if (filename[0] == '.' && filename[1] == '/') {
+                filename += 2;
+            }
+            printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
 
             if (!params->op->file_with_matches) {
                 matched_line_queue_node *match_line;

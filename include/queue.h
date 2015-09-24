@@ -44,7 +44,7 @@ struct _file_queue {
 };
 
 file_queue *create_file_queue();
-file_queue_node *enqueue_file(file_queue *queue, char *filename);
+file_queue_node *enqueue_file(file_queue *queue, const char *filename);
 file_queue_node *dequeue_file_for_search(file_queue *queue);
 file_queue_node *dequeue_string_for_print(file_queue *queue);
 void free_file_queue(file_queue *queue);

@@ -243,7 +243,9 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
     int read_len, last_line_start, line_no_offset = 1, match_line_count = 0, read_bytes = 0;
     char *buf = (char *)malloc(sizeof(char) * n);
 
-    generate_bad_character_table(pattern, t);
+    if (!op->use_regex) {
+        generate_bad_character_table(pattern, t);
+    }
 
     // Read every N(65536) bytes until reach to EOF. This method is efficient for memory if file
     // size is very large. And maybe, almost source code files falls within 65536 bytes, so almost
