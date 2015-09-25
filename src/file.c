@@ -125,7 +125,7 @@ enum file_type is_binary(int fd)
  * Check if the directory entry is ignored by the highway. The directory is ignored if it is the
  * current directory or upper directory or .git directory.
  */
-bool is_ignore_directory(const struct dirent *entry)
+bool is_skip_directory(const struct dirent *entry)
 {
     bool cur = entry->d_namlen == 1 && entry->d_name[0] == '.';
     bool up  = entry->d_namlen == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';

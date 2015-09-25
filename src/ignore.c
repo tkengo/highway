@@ -8,24 +8,33 @@
 #include "file.h"
 #include "util.h"
 
-ignore_list *create_ignore_list_from_gitignore(char *gitignore)
+/**
+ * Create ignore list from the .gitignore file in the specified path. Return NULL if there is no
+ * the .gitignore file.
+ */
+ignore_list *create_ignore_list_from_gitignore(const char *path)
 {
+    char buf[1024];
+    sprintf(buf, "%s/%s", path, ".gitignore");
+
+    FILE *fp = fopen(buf, "r");
+    if (!fp) {
+        fclose(fp);
+        return NULL;
+    }
+
     ignore_list *list = (ignore_list *)malloc(sizeof(ignore_list));
     list->first = NULL;
     list->last  = NULL;
 
-    FILE *fp = fopen(gitignore, "r");
-    if (fp != NULL) {
-        char ignore[1024];
-        while (fgets(ignore, 1024, fp) != NULL) {
-            trim(ignore);
-            if (ignore[0] == '#' || ignore[0] == '!') {
-                continue;
-            }
-            add_ignore_list(list, ignore);
+    while (fgets(buf, 1024, fp) != NULL) {
+        trim(buf);
+        if (buf[0] == '#' || buf[0] == '!') {
+            continue;
         }
-        fclose(fp);
+        add_ignore_list(list, buf);
     }
+    fclose(fp);
 
     return list;
 }

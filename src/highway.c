@@ -35,12 +35,8 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
 }
 
 /**
- * Find search target files recursively under the specified directories.
- *
- * @param queue A target file is added to this queue.
- * @param base A base directory name.
- * @param path A directory name or filename.
- * @param ignores Ignore list.
+ * Find search target files recursively under the specified directories, and add filenames to the
+ * queue used by search worker.
  */
 bool find_target_files(file_queue *queue, const char *base, const char *path, ignore_list *ignores)
 {
@@ -54,14 +50,12 @@ bool find_target_files(file_queue *queue, const char *base, const char *path, ig
             enqueue_file_exclusively(queue, path);
             return true;
         } else {
-            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", path);
             return false;
         }
     }
 
     if (ignores == NULL) {
-        sprintf(buf, "%s/%s", path, ".gitignore");
-        ignores = create_ignore_list_from_gitignore(buf);
+        ignores = create_ignore_list_from_gitignore(path);
     }
 
     int offset = 0;
@@ -69,7 +63,7 @@ bool find_target_files(file_queue *queue, const char *base, const char *path, ig
     while ((entry = readdir(dir)) != NULL) {
         // `readdir` returns also current or upper directory, but we don't need that directories,
         // so skip them. And also .git directory doesn't need.
-        if (is_ignore_directory(entry)) {
+        if (is_skip_directory(entry)) {
             continue;
         }
 
@@ -118,7 +112,8 @@ int main(int argc, char **argv)
     log_d("%d threads was launched for searching.", op.worker);
 
     for (int i = 0; i < op.paths_count; i++) {
-        if (!find_target_files(queue, op.root_paths[i], op.root_paths[i], NULL)) {
+        char *path = op.root_paths[i];
+        if (!find_target_files(queue, path, path, NULL)) {
             return_code = 1;
             break;
         }
