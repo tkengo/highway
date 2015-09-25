@@ -48,12 +48,17 @@ void destroy_mutex()
     pthread_cond_destroy(&print_cond);
 }
 
+/**
+ * Print worker. This method was invoked from search worker when searching was completed.
+ */
 void *print_worker(void *arg)
 {
     worker_params *params = (worker_params *)arg;
     file_queue *queue = params->queue;
 
     while (1) {
+        // This worker takes out a print target file from the queue. If the queue is empty, worker
+        // will be waiting until find at least one target print file.
         pthread_mutex_lock(&print_mutex);
 
         file_queue_node *current = peek_file_for_print(queue);

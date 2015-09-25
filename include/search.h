@@ -11,6 +11,7 @@ enum file_type;
 
 typedef struct _match {
     int start;
+    int end;
     int line_no;
     int line_start;
 } match;

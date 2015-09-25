@@ -22,6 +22,9 @@ bool is_complete_finding_file()
     return complete_finding_file;
 }
 
+/**
+ * Add a filename to the queue and launch the sleeping search worker.
+ */
 void enqueue_file_exclusively(file_queue *queue, const char *filename)
 {
     pthread_mutex_lock(&file_mutex);
@@ -34,28 +37,29 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
  * Find search target files recursively under the specified directories.
  *
  * @param queue A target file is added to this queue.
- * @param dirname A directory name or filename.
+ * @param base A base directory name.
+ * @param path A directory name or filename.
  * @param ignores Ignore list.
  */
-bool find_target_files(file_queue *queue, const char *base, const char *dirname, ignore_list *ignores)
+bool find_target_files(file_queue *queue, const char *base, const char *path, ignore_list *ignores)
 {
     char buf[1024];
 
-    // Open the dirname as a directory. If it is not a directory, check whether if it is a file,
+    // Open the path as a directory. If it is not a directory, check whether if it is a file,
     // and then add the file to the queue if it is true.
-    DIR *dir = opendir(dirname);
+    DIR *dir = opendir(path);
     if (dir == NULL) {
-        if (access(dirname, F_OK) == 0) {
-            enqueue_file_exclusively(queue, dirname);
+        if (access(path, F_OK) == 0) {
+            enqueue_file_exclusively(queue, path);
             return true;
         } else {
-            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", dirname);
+            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", path);
             return false;
         }
     }
 
     if (ignores == NULL) {
-        sprintf(buf, "%s/%s", dirname, ".gitignore");
+        sprintf(buf, "%s/%s", path, ".gitignore");
         ignores = create_ignore_list_from_gitignore(buf);
     }
 
@@ -68,7 +72,7 @@ bool find_target_files(file_queue *queue, const char *base, const char *dirname,
             continue;
         }
 
-        sprintf(buf, "%s/%s", dirname, entry->d_name);
+        sprintf(buf, "%s/%s", path, entry->d_name);
         if (ignores != NULL && is_ignore(ignores, base, buf, entry)) {
             continue;
         }
