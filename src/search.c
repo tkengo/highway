@@ -108,7 +108,7 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
  * A fast pattern matching algorithm.
  * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
  */
-int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char *pattern, match *matches, int max_match, enum file_type t, int *last_line_start, int *last_line_no)
+int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char *pattern, match *matches, enum file_type t, int *last_line_start, int *last_line_no)
 {
     int i, j = 0, m = strlen(pattern);
     int match_count = 0;
@@ -128,7 +128,7 @@ int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char 
                     matches[match_count].line_no    = line_no;
                     matches[match_count].line_start = line_start;
 
-                    if (max_match == ++match_count) {
+                    if (MAX_MATCH_COUNT == ++match_count) {
                         return match_count;
                     }
                 }
@@ -162,16 +162,20 @@ int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char 
 /**
  * Search the pattern as a regular expression.
  */
-int regex(const unsigned char *buf, int read_len, const char *pattern, enum file_type t, match *matches, int max_match, int *last_line_start)
+int regex(const unsigned char *buf, int read_len, const char *pattern, enum file_type t, match *matches, int *last_line_start)
 {
+    OnigRegion *region = onig_region_new();
+    int match_count = 0;
+    int i = 0, line_start = 0, line_no = 1;
+
+    // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
+    // but this wrapper method of the onig_new is implemented in thread safety.
     regex_t *reg = onig_new_wrap(pattern, t);
     if (reg == NULL) {
         return 0;
     }
 
-    OnigRegion *region = onig_region_new();
-    int match_count = 0;
-    int i = 0, line_start = 0, line_no = 1;
+    // Search every lines using compiled regular expression above.
     while (i < read_len) {
         if (buf[i] == 0x0A || buf[i] == 0x0D) {
             // Skip if current line has no contents.
@@ -179,8 +183,8 @@ int regex(const unsigned char *buf, int read_len, const char *pattern, enum file
                 int pos = 0;
                 while (1) {
                     const unsigned char *start = buf + line_start + pos,
-                          *end   = buf + i,
-                          *range = end;
+                                        *end   = buf + i,
+                                        *range = end;
                     int r = onig_search(reg, buf, end, start, range, region, ONIG_OPTION_NONE);
                     if (r >= 0) {
                         matches[match_count].start      = region->beg[0];
@@ -188,6 +192,10 @@ int regex(const unsigned char *buf, int read_len, const char *pattern, enum file
                         matches[match_count].line_no    = line_no;
                         matches[match_count].line_start = line_start;
                         match_count++;
+
+                        if (MAX_MATCH_COUNT == match_count) {
+                            goto finish;
+                        }
 
                         if (i <= region->end[0]) {
                             break;
@@ -205,6 +213,8 @@ int regex(const unsigned char *buf, int read_len, const char *pattern, enum file
 
         i++;
     }
+
+finish:
     onig_region_free(region, 1);
 
     *last_line_start = line_start;
@@ -247,7 +257,6 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 pattern,
                 t,
                 matches,
-                MAX_MATCH_COUNT,
                 &last_line_start
             );
         } else {
@@ -258,7 +267,6 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 line_no_offset,
                 pattern,
                 matches,
-                MAX_MATCH_COUNT,
                 t,
                 &last_line_start,
                 &line_no_offset
