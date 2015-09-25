@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "oniguruma.h"
 #include "search.h"
+#include "regex.h"
 #include "file.h"
 #include "color.h"
+#include "oniguruma.h"
 
 static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
@@ -24,61 +25,6 @@ void generate_bad_character_table(const char *pattern, enum file_type t)
     }
 
     tbl_created[t] = true;
-}
-
-/**
- * A fast pattern matching algorithm.
- * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
- */
-int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char *pattern, match *matches, int max_match, enum file_type t, int *last_line_start, int *last_line_no)
-{
-    int i, j = 0, m = strlen(pattern);
-    int match_count = 0;
-    int line_no = line_no_offset;
-    int line_start = 0;
-    unsigned char *p = (unsigned char *)pattern;
-    unsigned char firstCh = p[0];
-    unsigned char lastCh  = p[m - 1];
-
-    while (j <= buf_len - m) {
-        if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
-            for (i = m - 2; i >= 0 && p[i] == buf[j + i]; --i) {
-                if (i <= 0) {
-                    // Pattern matched.
-                    matches[match_count].start      = j;
-                    matches[match_count].end        = j + m;
-                    matches[match_count].line_no    = line_no;
-                    matches[match_count].line_start = line_start;
-
-                    if (max_match == ++match_count) {
-                        return match_count;
-                    }
-                }
-            }
-        }
-        int skip = tbl[t][buf[j + m]];
-        for (int k = 0; k < skip; k++) {
-            unsigned char t = buf[j + k];
-            if (t == 0x0A || t == 0x0D) {
-                line_no++;
-                line_start = j + k + 1;
-            }
-        }
-        j += skip;
-    }
-
-    while (j < buf_len) {
-        unsigned char t = buf[j++];
-        if (t == 0x0A || t == 0x0D) {
-            line_no++;
-            line_start = j;
-        }
-    }
-
-    *last_line_start = line_start;
-    *last_line_no    = line_no;
-
-    return match_count;
 }
 
 /**
@@ -159,33 +105,71 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
 }
 
 /**
+ * A fast pattern matching algorithm.
+ * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
+ */
+int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char *pattern, match *matches, int max_match, enum file_type t, int *last_line_start, int *last_line_no)
+{
+    int i, j = 0, m = strlen(pattern);
+    int match_count = 0;
+    int line_no = line_no_offset;
+    int line_start = 0;
+    unsigned char *p = (unsigned char *)pattern;
+    unsigned char firstCh = p[0];
+    unsigned char lastCh  = p[m - 1];
+
+    while (j <= buf_len - m) {
+        if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
+            for (i = m - 2; i >= 0 && p[i] == buf[j + i]; --i) {
+                if (i <= 0) {
+                    // Pattern matched.
+                    matches[match_count].start      = j;
+                    matches[match_count].end        = j + m;
+                    matches[match_count].line_no    = line_no;
+                    matches[match_count].line_start = line_start;
+
+                    if (max_match == ++match_count) {
+                        return match_count;
+                    }
+                }
+            }
+        }
+        int skip = tbl[t][buf[j + m]];
+        for (int k = 0; k < skip; k++) {
+            unsigned char t = buf[j + k];
+            if (t == 0x0A || t == 0x0D) {
+                line_no++;
+                line_start = j + k + 1;
+            }
+        }
+        j += skip;
+    }
+
+    while (j < buf_len) {
+        unsigned char t = buf[j++];
+        if (t == 0x0A || t == 0x0D) {
+            line_no++;
+            line_start = j;
+        }
+    }
+
+    *last_line_start = line_start;
+    *last_line_no    = line_no;
+
+    return match_count;
+}
+
+/**
  * Search the pattern as a regular expression.
  */
 int regex(const unsigned char *buf, int read_len, const char *pattern, enum file_type t, match *matches, int max_match, int *last_line_start)
 {
-    regex_t *reg;
-    OnigErrorInfo einfo;
-    OnigEncodingType *enc;
-    UChar *p = (UChar *)pattern;
-
-    switch (t) {
-        case FILE_TYPE_EUC_JP:
-            enc = ONIG_ENCODING_EUC_JP;
-            break;
-        case FILE_TYPE_SHIFT_JIS:
-            enc = ONIG_ENCODING_SJIS;
-            break;
-        default:
-            enc = ONIG_ENCODING_UTF8;
-            break;
-    }
-    int r = onig_new(&reg, p, p + strlen(pattern), ONIG_OPTION_DEFAULT, enc, ONIG_SYNTAX_DEFAULT, &einfo);
-    if (r != ONIG_NORMAL) {
+    regex_t *reg = onig_new_wrap(pattern, t);
+    if (reg == NULL) {
         return 0;
     }
 
     OnigRegion *region = onig_region_new();
-
     int match_count = 0;
     int i = 0, line_start = 0, line_no = 1;
     while (i < read_len) {
@@ -197,7 +181,7 @@ int regex(const unsigned char *buf, int read_len, const char *pattern, enum file
                     const unsigned char *start = buf + line_start + pos,
                           *end   = buf + i,
                           *range = end;
-                    r = onig_search(reg, buf, end, start, range, region, ONIG_OPTION_NONE);
+                    int r = onig_search(reg, buf, end, start, range, region, ONIG_OPTION_NONE);
                     if (r >= 0) {
                         matches[match_count].start      = region->beg[0];
                         matches[match_count].end        = region->end[0];
@@ -221,9 +205,7 @@ int regex(const unsigned char *buf, int read_len, const char *pattern, enum file
 
         i++;
     }
-
     onig_region_free(region, 1);
-    onig_free(reg);
 
     *last_line_start = line_start;
 

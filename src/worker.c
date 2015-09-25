@@ -53,6 +53,7 @@ void destroy_mutex()
  */
 void *print_worker(void *arg)
 {
+    matched_line_queue_node *match_line;
     worker_params *params = (worker_params *)arg;
     file_queue *queue = params->queue;
 
@@ -60,9 +61,9 @@ void *print_worker(void *arg)
         // This worker takes out a print target file from the queue. If the queue is empty, worker
         // will be waiting until find at least one target print file.
         pthread_mutex_lock(&print_mutex);
-
         file_queue_node *current = peek_file_for_print(queue);
         while (current == NULL || !current->searched) {
+            // Break this loop if all files was searched.
             if (current == NULL && is_complete_finding_file()) {
                 pthread_mutex_unlock(&print_mutex);
                 return NULL;
@@ -74,24 +75,23 @@ void *print_worker(void *arg)
                 current = peek_file_for_print(queue);
             }
         }
-
         pthread_mutex_unlock(&print_mutex);
 
         if (current && current->matched) {
+            // Print the filename with green color.
             const char *filename = current->filename;
             if (filename[0] == '.' && filename[1] == '/') {
                 filename += 2;
             }
             printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
 
+            // If `file_with_matches` option is available, match results don't print on console.
             if (!params->op->file_with_matches) {
-                matched_line_queue_node *match_line;
                 while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
                     if (current->t == FILE_TYPE_UTF8) {
                         printf("%s\n", match_line->line);
                     } else {
-                        int line_len = strlen(match_line->line);
-                        const int utf8_len_guess = line_len * 2;
+                        const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
                         char out[utf8_len_guess];
                         memset(out, 0, utf8_len_guess);
                         if (current->t == FILE_TYPE_EUC_JP) {
@@ -104,6 +104,7 @@ void *print_worker(void *arg)
                 }
                 printf("\n");
             }
+
             free_matched_line_queue(current->match_lines);
         }
     }

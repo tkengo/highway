@@ -12,6 +12,7 @@
 #include "worker.h"
 #include "ignore.h"
 #include "util.h"
+#include "regex.h"
 #include "color.h"
 #include "oniguruma.h"
 
@@ -103,8 +104,8 @@ int main(int argc, char **argv)
     init_option(argc, argv, &op);
     init_iconv();
 
-    if (op.use_regex) {
-        onig_init();
+    if (op.use_regex && !onig_init_wrap()) {
+        return 1;
     }
 
     file_queue *queue = create_file_queue();
@@ -136,7 +137,7 @@ int main(int argc, char **argv)
     close_iconv();
 
     if (op.use_regex) {
-        onig_end();
+        onig_end_wrap();
     }
 
     return return_code;

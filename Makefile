@@ -19,6 +19,7 @@ SOURCES = \
 		  log.c \
 		  option.c \
 		  util.c \
+		  regex.c \
 		  help.c \
 		  vendor/onigmo/regcomp.c \
 		  vendor/onigmo/regenc.c \
