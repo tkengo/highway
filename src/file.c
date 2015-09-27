@@ -11,7 +11,7 @@
 /**
  * Check if the filename is a binary file.
  */
-enum file_type is_binary(int fd)
+enum file_type detect_type_type(int fd)
 {
     if (stdin_redirect_from()) {
         return FILE_TYPE_UTF8;
