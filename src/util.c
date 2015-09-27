@@ -1,6 +1,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <iconv.h>
+#include <unistd.h>
+#include "common.h"
 
 static iconv_t euc_ic;
 static iconv_t sjis_ic;
@@ -27,6 +29,16 @@ void init_iconv()
     sjis_ic      = iconv_open("SHIFT_JIS", "UTF-8");
     utf8_euc_ic  = iconv_open("UTF-8",     "EUC-JP");
     utf8_sjis_ic = iconv_open("UTF-8",     "SHIFT_JIS");
+}
+
+bool stdin_redirect_from()
+{
+    return !isatty(STDIN_FILENO);
+}
+
+bool stdout_redirect_to()
+{
+    return !isatty(STDOUT_FILENO);
 }
 
 void close_iconv()

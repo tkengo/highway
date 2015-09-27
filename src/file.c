@@ -6,12 +6,17 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "file.h"
+#include "util.h"
 
 /**
  * Check if the filename is a binary file.
  */
 enum file_type is_binary(int fd)
 {
+    if (stdin_redirect_from()) {
+        return FILE_TYPE_UTF8;
+    }
+
     // Read the file content only 512-bytes from the header in order to improve speed of the
     // encoding detection. The detection accuracy of this method is not perfect but fast.
     char buf[BUF_SIZE_FOR_FILE_TYPE_CHECK];

@@ -21,5 +21,6 @@ typedef struct _match {
 
 void generate_bad_character_table(const char *pattern, enum file_type t);
 int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines);
+int search_stream(const char *pattern, const hw_option *op);
 
 #endif // _HW_TABLE_H_

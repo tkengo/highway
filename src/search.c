@@ -5,6 +5,7 @@
 #include "regex.h"
 #include "file.h"
 #include "color.h"
+#include "util.h"
 #include "oniguruma.h"
 
 static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
@@ -57,8 +58,13 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
             node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
             node->line = (char *)malloc(sizeof(char) * buffer_len);
 
-            // Append line no. It has yellow color.
-            sprintf(node->line, "%s%d%s:", LINE_NO_COLOR, current_line_no, RESET_COLOR);
+            // Append line no. It has yellow color. But if stdout is redirected, the results will be
+            // printed with no color.
+            if (stdout_redirect_to()) {
+                sprintf(node->line, "%d:", current_line_no);
+            } else {
+                sprintf(node->line, "%s%d%s:", LINE_NO_COLOR, current_line_no, RESET_COLOR);
+            }
         }
 
         // If multiple matches in one line, for example:
@@ -80,10 +86,16 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
                 int pattern_len   = matches[i].end - match_start;
                 int prefix_length = match_start - print_start;
 
-                strncat(node->line, buf + print_start,                 prefix_length);
-                strncat(node->line, MATCH_WORD_COLOR,                  MATCH_WORD_COLOR_LEN);
+                // Concatenate prefix and pattern string with escape sequence for coloring. But
+                // same as line no, if stdout is redirected, then no color.
+                strncat(node->line, buf + print_start, prefix_length);
+                if (!stdout_redirect_to()) {
+                    strncat(node->line, MATCH_WORD_COLOR, MATCH_WORD_COLOR_LEN);
+                }
                 strncat(node->line, buf + print_start + prefix_length, pattern_len);
-                strncat(node->line, RESET_COLOR,                       RESET_COLOR_LEN);
+                if (!stdout_redirect_to()) {
+                    strncat(node->line, RESET_COLOR, RESET_COLOR_LEN);
+                }
 
                 print_start = match_start + pattern_len;
             }
@@ -108,7 +120,14 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
  * A fast pattern matching algorithm.
  * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
  */
-int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char *pattern, match *matches, enum file_type t, int *last_line_start, int *last_line_no)
+int ssabs(const unsigned char *buf,
+          int buf_len,
+          int line_no_offset,
+          const char *pattern,
+          match *matches,
+          enum file_type t,
+          int *last_line_start,
+          int *last_line_no)
 {
     int i, j = 0, m = strlen(pattern);
     int match_count = 0;
@@ -162,11 +181,18 @@ int ssabs(const unsigned char *buf, int buf_len, int line_no_offset, const char 
 /**
  * Search the pattern as a regular expression.
  */
-int regex(const unsigned char *buf, int read_len, const char *pattern, enum file_type t, match *matches, int *last_line_start)
+int regex(const unsigned char *buf,
+          int read_len,
+          int line_no_offset,
+          const char *pattern,
+          match *matches,
+          enum file_type t,
+          int *last_line_start,
+          int *last_line_no)
 {
     OnigRegion *region = onig_region_new();
     int match_count = 0;
-    int i = 0, line_start = 0, line_no = 1;
+    int i = 0, line_start = 0, line_no = line_no_offset;
 
     // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
     // but this wrapper method of the onig_new is implemented in thread safety.
@@ -218,6 +244,7 @@ finish:
     onig_region_free(region, 1);
 
     *last_line_start = line_start;
+    *last_line_no    = line_no;
 
     return match_count;
 }
@@ -254,10 +281,12 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
             match_count = regex(
                 (unsigned char *)buf,
                 read_len,
+                line_no_offset,
                 pattern,
-                t,
                 matches,
-                &last_line_start
+                t,
+                &last_line_start,
+                &line_no_offset
             );
         } else {
             // Using SSABS pattern matching algorithm.
@@ -303,4 +332,55 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
 
     free(buf);
     return match_line_count;
+}
+
+int search_stream(const char *pattern, const hw_option *op)
+{
+    char buf[N], line[N], filename[1024];
+    bool is_print_filename = false;
+    int m = strlen(pattern), match_file_count = 0;
+    while (fgets(line, N, stdin) != NULL) {
+        if (strncmp(line, FILENAME_COLOR, FILENAME_COLOR_LEN) == 0) {
+            is_print_filename = false;
+            strcpy(filename, line);
+            continue;
+        }
+        if (line[0] == 0x0A || line[0] == 0x0D) {
+            continue;
+        }
+
+        memset(buf, 0, N);
+
+        char *current = index(line, ':');
+        strncpy(buf, line, current - line);
+        bool matched = false;
+        while (1) {
+            char *index = strstr(current + 1, pattern);
+            if (index != NULL) {
+                strncat(buf, current, index - current);
+                strncat(buf, MATCH_WORD_COLOR2, MATCH_WORD_COLOR2_LEN);
+                strncat(buf, index, m);
+                strncat(buf, RESET_COLOR, RESET_COLOR_LEN);
+                current = index + m;
+                matched = true;
+            } else {
+                strcat(buf, current);
+                break;
+            }
+        }
+
+        if (matched) {
+            if (!is_print_filename) {
+                if (match_file_count > 0) {
+                    printf("\n");
+                }
+                match_file_count++;
+                printf("%s", filename);
+                is_print_filename = true;
+            }
+            printf("%s", buf);
+        }
+    }
+    printf("\n");
+    return 0;
 }

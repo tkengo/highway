@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <dirent.h>
 #include <pthread.h>
 #include <fcntl.h>
@@ -83,6 +84,49 @@ bool find_target_files(file_queue *queue, const char *base, const char *path, ig
     return true;
 }
 
+int process_by_terminal(hw_option *op)
+{
+    file_queue *queue = create_file_queue();
+    worker_params params = { queue, op };
+    pthread_t th[op->worker], pth;
+    for (int i = 0; i < op->worker; i++) {
+        pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
+    }
+    pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
+    log_d("%d threads was launched for searching.", op->worker);
+
+    for (int i = 0; i < op->paths_count; i++) {
+        char *path = op->root_paths[i];
+        if (!find_target_files(queue, path, path, NULL)) {
+            return 1;
+            break;
+        }
+    }
+    complete_finding_file = true;
+    pthread_cond_broadcast(&file_cond);
+    pthread_cond_broadcast(&print_cond);
+
+    for (int i = 0; i < op->worker; i++) {
+        pthread_join(th[i], NULL);
+    }
+    pthread_join(pth, NULL);
+    free_file_queue(queue);
+
+    return 0;
+}
+
+int process_by_redirection(hw_option *op)
+{
+    file_queue *queue = create_file_queue();
+    enqueue_file(queue, "dummy");
+    complete_finding_file = true;
+
+    // Searching.
+    int match_line_count = search_stream(op->pattern, op);
+
+    return 0;
+}
+
 /**
  * Entry point.
  */
@@ -102,33 +146,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    file_queue *queue = create_file_queue();
-    worker_params params = { queue, &op };
-    pthread_t th[op.worker], pth;
-    for (int i = 0; i < op.worker; i++) {
-        pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
+    if (stdin_redirect_from()) {
+        return_code = process_by_redirection(&op);
+    } else {
+        return_code = process_by_terminal(&op);
     }
-    pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
-    log_d("%d threads was launched for searching.", op.worker);
-
-    for (int i = 0; i < op.paths_count; i++) {
-        char *path = op.root_paths[i];
-        if (!find_target_files(queue, path, path, NULL)) {
-            return_code = 1;
-            break;
-        }
-    }
-    complete_finding_file = true;
-    pthread_cond_broadcast(&file_cond);
-    pthread_cond_broadcast(&print_cond);
-
-    for (int i = 0; i < op.worker; i++) {
-        pthread_join(th[i], NULL);
-    }
-    pthread_join(pth, NULL);
 
     destroy_mutex();
-    free_file_queue(queue);
     close_iconv();
 
     if (op.use_regex) {

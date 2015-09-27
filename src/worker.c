@@ -48,12 +48,62 @@ void destroy_mutex()
     pthread_cond_destroy(&print_cond);
 }
 
+void print_to_terminal(const char *filename, file_queue_node *current, const hw_option *op)
+{
+    matched_line_queue_node *match_line;
+    printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
+
+    // If `file_with_matches` option is available, match results don't print on console.
+    if (!op->file_with_matches) {
+        while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
+            if (current->t == FILE_TYPE_UTF8) {
+                printf("%s\n", match_line->line);
+            } else {
+                const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
+                char out[utf8_len_guess];
+                memset(out, 0, utf8_len_guess);
+                if (current->t == FILE_TYPE_EUC_JP) {
+                    to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
+                } else if (current->t == FILE_TYPE_SHIFT_JIS) {
+                    to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
+                }
+                printf("%s\n", out);
+            }
+        }
+        printf("\n");
+    }
+}
+
+void print_redirection(const char *filename, file_queue_node *current, const hw_option *op)
+{
+    matched_line_queue_node *match_line;
+
+    // If `file_with_matches` option is available, match results don't print on console.
+    if (!op->file_with_matches) {
+        while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
+            if (current->t == FILE_TYPE_UTF8) {
+                printf("%s:%s\n", filename, match_line->line);
+            } else {
+                const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
+                char out[utf8_len_guess];
+                memset(out, 0, utf8_len_guess);
+                if (current->t == FILE_TYPE_EUC_JP) {
+                    to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
+                } else if (current->t == FILE_TYPE_SHIFT_JIS) {
+                    to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
+                }
+                printf("%s:%s\n", filename, out);
+            }
+        }
+        printf("\n");
+    }
+}
+
 /**
  * Print worker. This method was invoked from search worker when searching was completed.
  */
 void *print_worker(void *arg)
 {
-    matched_line_queue_node *match_line;
     worker_params *params = (worker_params *)arg;
     file_queue *queue = params->queue;
 
@@ -78,31 +128,16 @@ void *print_worker(void *arg)
         pthread_mutex_unlock(&print_mutex);
 
         if (current && current->matched) {
-            // Print the filename with green color.
-            const char *filename = current->filename;
+            // Remove ./ from the filename in order to make easy to see.
+            char *filename = current->filename;
             if (filename[0] == '.' && filename[1] == '/') {
                 filename += 2;
             }
-            printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
 
-            // If `file_with_matches` option is available, match results don't print on console.
-            if (!params->op->file_with_matches) {
-                while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
-                    if (current->t == FILE_TYPE_UTF8) {
-                        printf("%s\n", match_line->line);
-                    } else {
-                        const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
-                        char out[utf8_len_guess];
-                        memset(out, 0, utf8_len_guess);
-                        if (current->t == FILE_TYPE_EUC_JP) {
-                            to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
-                        } else if (current->t == FILE_TYPE_SHIFT_JIS) {
-                            to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
-                        }
-                        printf("%s\n", out);
-                    }
-                }
-                printf("\n");
+            if (stdout_redirect_to()) {
+                print_redirection(filename, current, params->op);
+            } else {
+                print_to_terminal(filename, current, params->op);
             }
 
             free_matched_line_queue(current->match_lines);
@@ -141,7 +176,8 @@ void *search_worker(void *arg)
             continue;
         }
 
-        // Check file type of the target file, then if it is a binary, we skip it.
+        // Check file type of the target file, then if it is a binary, we skip it because the hw is
+        // the software in order to search "source code", so searching binary files is not good.
         int fd = open(current->filename, O_RDONLY);
         if ((t = is_binary(fd)) != FILE_TYPE_BINARY) {
             char *pattern = params->op->pattern;
