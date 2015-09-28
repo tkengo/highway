@@ -76,6 +76,7 @@ void init_option(int argc, char **argv, hw_option *op)
     op->pattern_len = strlen(op->pattern);
     int paths_count = argc - optind;
     if (paths_count > MAX_PATHS_COUNT) {
+        log_buffered("Too many PATHs(%d) was passed. You can specify %d paths at most.", paths_count, MAX_PATHS_COUNT);
         paths_count = MAX_PATHS_COUNT;
     }
     if (paths_count > 0) {
