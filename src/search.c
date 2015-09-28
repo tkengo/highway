@@ -38,8 +38,7 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
 
     for (int i = 0; i < match_count; ) {
         // Find the end of the line.
-        int line_end = matches[i].start;
-        while (line_end < read_len && buf[line_end] != 0x0A && buf[line_end] != 0x0D) line_end++;
+        int line_end = matches[i].line_end;
 
         // Calculate count of the match elements in one line.
         int current_line_no = matches[i].line_no, j = i;
@@ -52,19 +51,15 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
         int line_len   = line_end - line_start + 1;
         int buffer_len = line_len + LINE_NO_ESCAPE_LEN + 10 + MATCH_WORD_ESCAPE_LEN * match_count_in_one_line;
 
-        // This step will be skiped if `file_with_matches` option (shows only filenames) was passed
-        // when the program was launched because the result buffer is not necessary.
-        if (!op->file_with_matches) {
-            node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
-            node->line = (char *)malloc(sizeof(char) * buffer_len);
+        node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
+        node->line = (char *)malloc(sizeof(char) * buffer_len);
 
-            // Append line no. It has yellow color. But if stdout is redirected, the results will be
-            // printed with no color.
-            if (stdout_redirect_to()) {
-                sprintf(node->line, "%d:", current_line_no);
-            } else {
-                sprintf(node->line, "%s%d%s:", LINE_NO_COLOR, current_line_no, RESET_COLOR);
-            }
+        // Append line no. It has yellow color. But if stdout is redirected, the results will be
+        // printed with no color.
+        if (stdout_redirect_to()) {
+            sprintf(node->line, "%d:", current_line_no);
+        } else {
+            sprintf(node->line, "%s%d%s:", LINE_NO_COLOR, current_line_no, RESET_COLOR);
         }
 
         // If multiple matches in one line, for example:
@@ -79,36 +74,28 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
         // "xxx(yellow)abc(reset)defghi(yellow)abc(reset)def"
         int print_start = line_start;
         while (i < match_count && current_line_no == matches[i].line_no) {
-            // Skip this step if `file_with_matches` option (shows only filenames) is available
-            // because the result buffer is not necessary.
-            if (!op->file_with_matches) {
-                int match_start   = matches[i].start;
-                int pattern_len   = matches[i].end - match_start;
-                int prefix_length = match_start - print_start;
+            int match_start   = matches[i].start;
+            int pattern_len   = matches[i].end - match_start;
+            int prefix_length = match_start - print_start;
 
-                // Concatenate prefix and pattern string with escape sequence for coloring. But
-                // same as line no, if stdout is redirected, then no color.
-                strncat(node->line, buf + print_start, prefix_length);
-                if (!stdout_redirect_to()) {
-                    strncat(node->line, MATCH_WORD_COLOR, MATCH_WORD_COLOR_LEN);
-                }
-                strncat(node->line, buf + print_start + prefix_length, pattern_len);
-                if (!stdout_redirect_to()) {
-                    strncat(node->line, RESET_COLOR, RESET_COLOR_LEN);
-                }
-
-                print_start = match_start + pattern_len;
+            // Concatenate prefix and pattern string with escape sequence for coloring. But
+            // same as line no, if stdout is redirected, then no color.
+            strncat(node->line, buf + print_start, prefix_length);
+            if (!stdout_redirect_to()) {
+                strncat(node->line, MATCH_WORD_COLOR, MATCH_WORD_COLOR_LEN);
+            }
+            strncat(node->line, buf + print_start + prefix_length, pattern_len);
+            if (!stdout_redirect_to()) {
+                strncat(node->line, RESET_COLOR, RESET_COLOR_LEN);
             }
 
+            print_start = match_start + pattern_len;
             i++;
         }
 
-        // Skip this step if `file_with_matches` option (shows only filenames) is available
-        // because the result buffer is not necessary.
-        if (!op->file_with_matches) {
-            strncat(node->line, buf + print_start, line_end - print_start);
-            enqueue_matched_line(match_lines, node);
-        }
+        // Concatenate suffix.
+        strncat(node->line, buf + print_start, line_end - print_start);
+        enqueue_matched_line(match_lines, node);
 
         match_line_count++;
     }
@@ -140,16 +127,14 @@ int ssabs(const unsigned char *buf,
     while (j <= buf_len - m) {
         if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
             for (i = m - 2; i >= 0 && p[i] == buf[j + i]; --i) {
-                if (i <= 0) {
+                if (i <= 0 && MAX_MATCH_COUNT >= match_count) {
                     // Pattern matched.
                     matches[match_count].start      = j;
                     matches[match_count].end        = j + m;
                     matches[match_count].line_no    = line_no;
                     matches[match_count].line_start = line_start;
-
-                    if (MAX_MATCH_COUNT == ++match_count) {
-                        return match_count;
-                    }
+                    matches[match_count].line_end   = -1;
+                    match_count++;
                 }
             }
         }
@@ -157,6 +142,12 @@ int ssabs(const unsigned char *buf,
         for (int k = 0; k < skip; k++) {
             unsigned char t = buf[j + k];
             if (t == 0x0A || t == 0x0D) {
+                int l = match_count - 1;
+                while (l >= 0 && matches[l].line_end == -1 && line_no == matches[l].line_no) {
+                    matches[l].line_end = j + k;
+                    l--;
+                }
+
                 line_no++;
                 line_start = j + k + 1;
             }
@@ -167,6 +158,12 @@ int ssabs(const unsigned char *buf,
     while (j < buf_len) {
         unsigned char t = buf[j++];
         if (t == 0x0A || t == 0x0D) {
+            int l = match_count - 1;
+            while (l >= 0 && matches[l].line_end == -1 && line_no == matches[l].line_no) {
+                matches[l].line_end = j;
+                l--;
+            }
+
             line_no++;
             line_start = j;
         }
@@ -260,7 +257,7 @@ finish:
 int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines)
 {
     int n = N;
-    int read_len, last_line_start, line_no_offset = 1, match_line_count = 0, read_bytes = 0;
+    int read_len, last_line_start, line_no_offset = 1, match_count_sum = 0, read_bytes = 0;
     char *buf = (char *)malloc(sizeof(char) * n);
 
     if (!op->use_regex) {
@@ -302,6 +299,8 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
             );
         }
 
+        match_count_sum += match_count;
+
         if (!eof) {
             // If there is too long line over 65536 bytes, reallocate the twice memory for the
             // current buffer, then search again.
@@ -317,21 +316,25 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
         }
 
         // Format search results.
-        match_line_count += format(buf, matches, match_count, read_len, op, match_lines);
+        // This step will be skiped if `file_with_matches` option (shows only filenames) was passed
+        // when the program was launched because the result buffer is not necessary.
+        if (!op->file_with_matches) {
+            format(buf, matches, match_count, read_len, op, match_lines);
+        }
 
         if (eof) {
             break;
         }
 
         // If we can't read the contents from the file one time, we should read from the position
-        // of the head of the last line in the next iteration because the contents may break up.
+        // of the head of the last line in the next iteration because the contents may be broken up.
         // So the file pointer will be seeked, then the next iteration starts from there.
         read_bytes += last_line_start;
         lseek(fd, read_bytes, SEEK_SET);
     }
 
     free(buf);
-    return match_line_count;
+    return match_count_sum;
 }
 
 int search_stream(const char *pattern, const hw_option *op)

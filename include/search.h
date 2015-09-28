@@ -7,17 +7,17 @@
 
 enum file_type;
 
-#include "option.h"
-
 typedef struct _match {
     int start;
     int end;
     int line_no;
     int line_start;
+    int line_end;
 } match;
 
 #include "file.h"
 #include "queue.h"
+#include "option.h"
 
 void generate_bad_character_table(const char *pattern, enum file_type t);
 int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines);

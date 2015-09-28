@@ -6,6 +6,7 @@
 #include "highway.h"
 #include "option.h"
 #include "log.h"
+#include "util.h"
 #include "help.h"
 
 void init_option(int argc, char **argv, hw_option *op)
@@ -14,8 +15,8 @@ void init_option(int argc, char **argv, hw_option *op)
     static int flag;
 
     static struct option longopts[] = {
-        { "help",              no_argument,       NULL,  'h' },
         { "file-with-matches", no_argument,       NULL,  'l' },
+        { "help",              no_argument,       NULL,  'h' },
         { "debug",             no_argument,       &flag, 1   },
         { "worker",            required_argument, &flag, 2   },
         { 0, 0, 0, 0 }

@@ -196,9 +196,9 @@ void *search_worker(void *arg)
 
             // Searching.
             matched_line_queue *match_lines = create_matched_line_queue();
-            int match_line_count = search(fd, pattern, params->op, t, match_lines);
+            int match_count = search(fd, pattern, params->op, t, match_lines);
 
-            if (match_line_count > 0) {
+            if (match_count > 0) {
                 // Set additional data to the queue data because it will be used on print worker in
                 // order to print results to the console. `match_lines` variable will be released
                 // along with the file queue when it is released.
