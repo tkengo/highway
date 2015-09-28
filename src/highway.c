@@ -159,5 +159,6 @@ int main(int argc, char **argv)
         onig_end_wrap();
     }
 
+    log_flush();
     return return_code;
 }

@@ -113,6 +113,7 @@ int ssabs(const unsigned char *buf,
           const char *pattern,
           match *matches,
           enum file_type t,
+          int *actual_match_count,
           int *last_line_start,
           int *last_line_no)
 {
@@ -123,18 +124,23 @@ int ssabs(const unsigned char *buf,
     unsigned char *p = (unsigned char *)pattern;
     unsigned char firstCh = p[0];
     unsigned char lastCh  = p[m - 1];
+    *actual_match_count = 0;
 
     while (j <= buf_len - m) {
         if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
             for (i = m - 2; i >= 0 && p[i] == buf[j + i]; --i) {
-                if (i <= 0 && MAX_MATCH_COUNT >= match_count) {
+                if (i <= 0) {
                     // Pattern matched.
-                    matches[match_count].start      = j;
-                    matches[match_count].end        = j + m;
-                    matches[match_count].line_no    = line_no;
-                    matches[match_count].line_start = line_start;
-                    matches[match_count].line_end   = -1;
-                    match_count++;
+                    if (MAX_MATCH_COUNT > match_count) {
+                        matches[match_count].start      = j;
+                        matches[match_count].end        = j + m;
+                        matches[match_count].line_no    = line_no;
+                        matches[match_count].line_start = line_start;
+                        matches[match_count].line_end   = -1;
+                        match_count++;
+                    }
+
+                    (*actual_match_count)++;
                 }
             }
         }
@@ -169,8 +175,8 @@ int ssabs(const unsigned char *buf,
         }
     }
 
-    *last_line_start = line_start;
-    *last_line_no    = line_no;
+    *last_line_start      = line_start;
+    *last_line_no         = line_no;
 
     return match_count;
 }
@@ -184,12 +190,14 @@ int regex(const unsigned char *buf,
           const char *pattern,
           match *matches,
           enum file_type t,
+          int *actual_match_count,
           int *last_line_start,
           int *last_line_no)
 {
     OnigRegion *region = onig_region_new();
     int match_count = 0;
     int i = 0, line_start = 0, line_no = line_no_offset;
+    *actual_match_count = 0;
 
     // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
     // but this wrapper method of the onig_new is implemented in thread safety.
@@ -210,15 +218,14 @@ int regex(const unsigned char *buf,
                                         *range = end;
                     int r = onig_search(reg, buf, end, start, range, region, ONIG_OPTION_NONE);
                     if (r >= 0) {
-                        matches[match_count].start      = region->beg[0];
-                        matches[match_count].end        = region->end[0];
-                        matches[match_count].line_no    = line_no;
-                        matches[match_count].line_start = line_start;
-                        match_count++;
-
-                        if (MAX_MATCH_COUNT == match_count) {
-                            goto finish;
+                        if (MAX_MATCH_COUNT > match_count) {
+                            matches[match_count].start      = region->beg[0];
+                            matches[match_count].end        = region->end[0];
+                            matches[match_count].line_no    = line_no;
+                            matches[match_count].line_start = line_start;
+                            match_count++;
                         }
+                        (*actual_match_count)++;
 
                         if (i <= region->end[0]) {
                             break;
@@ -237,7 +244,6 @@ int regex(const unsigned char *buf,
         i++;
     }
 
-finish:
     onig_region_free(region, 1);
 
     *last_line_start = line_start;
@@ -254,15 +260,17 @@ finish:
  * @param op The pattern string is included this struct.
  * @return The count of the matched lines.
  */
-int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines)
+int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines, int *sum_of_actual_match_count)
 {
-    int n = N;
-    int read_len, last_line_start, line_no_offset = 1, match_count_sum = 0, read_bytes = 0;
+    int n = N, m = strlen(pattern);
+    int read_len, actual_match_count, last_line_start;
+    int line_no_offset = 1, sum_of_match_count = 0, read_bytes = 0;
     char *buf = (char *)malloc(sizeof(char) * n);
 
     if (!op->use_regex) {
         generate_bad_character_table(pattern, t);
     }
+    *sum_of_actual_match_count = 0;
 
     // Read every N(65536) bytes until reach to EOF. This method is efficient for memory if file
     // size is very large. And maybe, almost source code files falls within 65536 bytes, so almost
@@ -271,8 +279,13 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
         // Check if pointer was reached to the end of the file.
         bool eof = read_len < n;
 
+        int match_size = read_len / m;
+        if (match_size > MAX_MATCH_COUNT) {
+            match_size = MAX_MATCH_COUNT;
+        }
+        match matches[match_size];
+
         int match_count;
-        match matches[MAX_MATCH_COUNT];
         if (op->use_regex) {
             // Using a regular expression.
             match_count = regex(
@@ -282,6 +295,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 pattern,
                 matches,
                 t,
+                &actual_match_count,
                 &last_line_start,
                 &line_no_offset
             );
@@ -294,12 +308,14 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 pattern,
                 matches,
                 t,
+                &actual_match_count,
                 &last_line_start,
                 &line_no_offset
             );
         }
 
-        match_count_sum += match_count;
+         sum_of_match_count        += match_count;
+        *sum_of_actual_match_count += actual_match_count;
 
         if (!eof) {
             // If there is too long line over 65536 bytes, reallocate the twice memory for the
@@ -334,7 +350,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
     }
 
     free(buf);
-    return match_count_sum;
+    return sum_of_match_count;
 }
 
 int search_stream(const char *pattern, const hw_option *op)
