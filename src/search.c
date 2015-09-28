@@ -167,7 +167,7 @@ int ssabs(const unsigned char *buf,
         if (t == 0x0A || t == 0x0D) {
             int l = match_count - 1;
             while (l >= 0 && matches[l].line_end == -1 && line_no == matches[l].line_no) {
-                matches[l].line_end = j;
+                matches[l].line_end = j - 1;
                 l--;
             }
 

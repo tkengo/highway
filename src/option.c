@@ -15,6 +15,7 @@ void init_option(int argc, char **argv, hw_option *op)
     static int flag;
 
     static struct option longopts[] = {
+        { "all-files",         no_argument,       NULL,  'a' },
         { "file-with-matches", no_argument,       NULL,  'l' },
         { "help",              no_argument,       NULL,  'h' },
         { "debug",             no_argument,       &flag, 1   },
@@ -28,10 +29,11 @@ void init_option(int argc, char **argv, hw_option *op)
     op->paths_count       = 1;
     op->file_with_matches = false;
     op->use_regex         = false;
+    op->all_files         = false;
     op->no_omit           = false;
 
     int ch;
-    while ((ch = getopt_long(argc, argv, "ehl", longopts, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "aehl", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -45,6 +47,10 @@ void init_option(int argc, char **argv, hw_option *op)
                         op->no_omit = true;
                         break;
                 }
+                break;
+
+            case 'a': /* All files searching */
+                op->all_files = true;
                 break;
 
             case 'e': /* Use regular expression */
