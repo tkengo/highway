@@ -51,6 +51,7 @@ bool find_target_files(file_queue *queue, const char *base, const char *path, ig
             enqueue_file_exclusively(queue, path);
             return true;
         } else {
+            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", path);
             return false;
         }
     }
@@ -97,10 +98,7 @@ int process_by_terminal(hw_option *op)
 
     for (int i = 0; i < op->paths_count; i++) {
         char *path = op->root_paths[i];
-        if (!find_target_files(queue, path, path, NULL)) {
-            return 1;
-            break;
-        }
+        find_target_files(queue, path, path, NULL);
     }
     complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);

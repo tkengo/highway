@@ -75,8 +75,11 @@ void init_option(int argc, char **argv, hw_option *op)
     op->pattern = argv[optind++];
     op->pattern_len = strlen(op->pattern);
     int paths_count = argc - optind;
+    if (paths_count > MAX_PATHS_COUNT) {
+        paths_count = MAX_PATHS_COUNT;
+    }
     if (paths_count > 0) {
-        for (int i = 0; i < paths_count && i < MAX_PATHS_COUNT; i++) {
+        for (int i = 0; i < paths_count; i++) {
             char *path = argv[optind + i];
             int len = strlen(path);
             if (path[len - 1] == '/') {
