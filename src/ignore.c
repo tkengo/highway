@@ -44,6 +44,7 @@ ignore_list_node *add_ignore_list(ignore_list *list, char *ignore)
     ignore_list_node *node = (ignore_list_node *)malloc(sizeof(ignore_list_node));
 
     int len = strlen(ignore);
+    node->next = NULL;
     node->is_root = *ignore == '/';
 
     if (*(ignore + len - 1) == '/') {
@@ -65,7 +66,7 @@ ignore_list_node *add_ignore_list(ignore_list *list, char *ignore)
     return node;
 }
 
-bool is_ignore(ignore_list *list, const char *base, const char *filename, const struct dirent *entry)
+bool is_ignore(ignore_list *list, const char *base, const char *path, const struct dirent *entry)
 {
     ignore_list_node *node = list->first;
 
@@ -77,11 +78,11 @@ bool is_ignore(ignore_list *list, const char *base, const char *filename, const 
 
         int res;
         if (node->is_root) {
-            res = fnmatch(node->ignore, filename + strlen(base), FNM_PATHNAME);
+            res = fnmatch(node->ignore, path + strlen(base), FNM_PATHNAME);
         } else if (node->is_no_dir) {
             res = fnmatch(node->ignore, entry->d_name, 0);
         } else {
-            res = fnmatch(node->ignore, filename + strlen(base), 0);
+            res = fnmatch(node->ignore, path + strlen(base), 0);
         }
 
         if (res == 0) {

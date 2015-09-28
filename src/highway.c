@@ -39,7 +39,7 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
  * Find search target files recursively under the specified directories, and add filenames to the
  * queue used by search worker.
  */
-bool find_target_files(file_queue *queue, const char *base, const char *path, ignore_list *ignores)
+bool find_target_files(file_queue *queue, const char *path, ignore_list *ignores)
 {
     char buf[1024];
 
@@ -64,18 +64,18 @@ bool find_target_files(file_queue *queue, const char *base, const char *path, ig
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         // `readdir` returns also current or upper directory, but we don't need that directories,
-        // so skip them. And also .git directory doesn't need.
+        // so skip them. And also hidden directory doesn't need.
         if (is_skip_directory(entry)) {
             continue;
         }
 
         sprintf(buf, "%s/%s", path, entry->d_name);
-        if (ignores != NULL && is_ignore(ignores, base, buf, entry)) {
+        if (ignores != NULL && is_ignore(ignores, path, buf, entry)) {
             continue;
         }
 
         if (is_directory(entry)) {
-            find_target_files(queue, base, buf + offset, ignores);
+            find_target_files(queue, buf + offset, ignores);
         } else if (is_search_target(entry)) {
             enqueue_file_exclusively(queue, buf + offset);
         }
@@ -97,8 +97,7 @@ int process_by_terminal(hw_option *op)
     log_d("%d threads was launched for searching.", op->worker);
 
     for (int i = 0; i < op->paths_count; i++) {
-        char *path = op->root_paths[i];
-        find_target_files(queue, path, path, NULL);
+        find_target_files(queue, op->root_paths[i], NULL);
     }
     complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);
