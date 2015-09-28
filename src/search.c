@@ -112,6 +112,7 @@ int ssabs(const unsigned char *buf,
           int line_no_offset,
           const char *pattern,
           match *matches,
+          int max_match_size,
           enum file_type t,
           int *actual_match_count,
           int *last_line_start,
@@ -131,7 +132,7 @@ int ssabs(const unsigned char *buf,
             for (i = m - 2; i >= 0 && p[i] == buf[j + i]; --i) {
                 if (i <= 0) {
                     // Pattern matched.
-                    if (MAX_MATCH_COUNT > match_count) {
+                    if (max_match_size > match_count) {
                         matches[match_count].start      = j;
                         matches[match_count].end        = j + m;
                         matches[match_count].line_no    = line_no;
@@ -189,6 +190,7 @@ int regex(const unsigned char *buf,
           int line_no_offset,
           const char *pattern,
           match *matches,
+          int max_match_size,
           enum file_type t,
           int *actual_match_count,
           int *last_line_start,
@@ -218,7 +220,7 @@ int regex(const unsigned char *buf,
                                         *range = end;
                     int r = onig_search(reg, buf, end, start, range, region, ONIG_OPTION_NONE);
                     if (r >= 0) {
-                        if (MAX_MATCH_COUNT > match_count) {
+                        if (max_match_size > match_count) {
                             matches[match_count].start      = region->beg[0];
                             matches[match_count].end        = region->end[0];
                             matches[match_count].line_no    = line_no;
@@ -280,7 +282,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
         bool eof = read_len < n;
 
         int match_size = read_len / m;
-        if (match_size > MAX_MATCH_COUNT) {
+        if (match_size > MAX_MATCH_COUNT && !op->no_omit) {
             match_size = MAX_MATCH_COUNT;
         }
         match matches[match_size];
@@ -294,6 +296,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 line_no_offset,
                 pattern,
                 matches,
+                match_size,
                 t,
                 &actual_match_count,
                 &last_line_start,
@@ -307,6 +310,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 line_no_offset,
                 pattern,
                 matches,
+                match_size,
                 t,
                 &actual_match_count,
                 &last_line_start,

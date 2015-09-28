@@ -19,6 +19,7 @@ void init_option(int argc, char **argv, hw_option *op)
         { "help",              no_argument,       NULL,  'h' },
         { "debug",             no_argument,       &flag, 1   },
         { "worker",            required_argument, &flag, 2   },
+        { "no-omit",           no_argument,       &flag, 3   },
         { 0, 0, 0, 0 }
     };
 
@@ -27,6 +28,7 @@ void init_option(int argc, char **argv, hw_option *op)
     op->paths_count       = 1;
     op->file_with_matches = false;
     op->use_regex         = false;
+    op->no_omit           = false;
 
     int ch;
     while ((ch = getopt_long(argc, argv, "ehl", longopts, NULL)) != -1) {
@@ -38,6 +40,9 @@ void init_option(int argc, char **argv, hw_option *op)
                         break;
                     case 2: /* --worker */
                         op->worker = atoi(optarg);
+                        break;
+                    case 3: /* --no-omit */
+                        op->no_omit = true;
                         break;
                 }
                 break;

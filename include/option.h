@@ -12,6 +12,7 @@ typedef struct _hw_option {
     int worker;
     bool file_with_matches;
     bool use_regex;
+    bool no_omit;
 } hw_option;
 
 void init_option(int argc, char **argv, hw_option *op);
