@@ -9,6 +9,7 @@ GCC = gcc
 BUILD_DIR = tmp/build/
 INCLUDE = -Iinclude -Ivendor/onigmo
 LIB = -L/usr/local/lib -liconv
+CFLAGS = -O3
 SOURCES = \
 		  highway.c \
 		  file.c \
@@ -75,13 +76,13 @@ TARGET = hw
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(GCC) -O2 $(INCLUDE) $(LIB) $^ -o $@
+	$(GCC) $(CFLAGS) $(INCLUDE) $(LIB) $^ -o $@
 
 $(BUILD_DIR)%.d: %.c
 	mkdir -p $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)vendor/onigmo/enc
 	$(GCC) -MM $(INCLUDE) $< | sed 's,\($(@F:.d=)\)\.o[ :]*,$(@D)/\1.o: ,g' > $@
-	echo "\t$(GCC) -O2 $(INCLUDE) -c -o $(subst .d,.o,$@) $$<" >> $@
+	echo "\t$(GCC) $(CFLAGS) $(INCLUDE) -c -o $(subst .d,.o,$@) $$<" >> $@
 
 -include $(DEPENDS)
 
