@@ -49,7 +49,7 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
         // escape sequence length used to be coloring result.
         int line_start = matches[i].line_start;
         int line_len   = line_end - line_start + 1;
-        int buffer_len = line_len + LINE_NO_ESCAPE_LEN + 10 + MATCH_WORD_ESCAPE_LEN * match_count_in_one_line;
+        int buffer_len = line_len + MATCH_WORD_ESCAPE_LEN * match_count_in_one_line;
 
         node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
         node->line_no = current_line_no;
@@ -336,8 +336,14 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
         // So the file pointer will be seeked, then the next iteration starts from there.
         if (last_line_start > 0) {
             read_bytes += last_line_start;
+        } else if (match_count > 0) {
+            if (matches[match_count - 1].end >= n - op->pattern_len) {
+                read_bytes += n;
+            } else {
+                read_bytes += n - op->pattern_len;
+            }
         } else {
-            read_bytes += n - op->pattern_len + 1;
+            read_bytes += n;
         }
         lseek(fd, read_bytes, SEEK_SET);
     }
