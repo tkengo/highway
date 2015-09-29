@@ -88,6 +88,10 @@ bool find_target_files(file_queue *queue,
         }
     }
 
+    if (ignores != NULL) {
+        free_ignore_list(ignores);
+    }
+
     closedir(dir);
     return true;
 }

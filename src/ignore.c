@@ -81,8 +81,10 @@ ignore_list *create_ignore_list_from_list(const char *path, ignore_list *list)
     ignore_list_node *node = list->first;
     while (node) {
         if (!node->is_root) {
-            new_list->last->next = node;
-            new_list->last = node;
+            ignore_list_node *new_node = (ignore_list_node *)malloc(sizeof(ignore_list_node));
+            *new_node = *node;
+            new_list->last->next = new_node;
+            new_list->last = new_node;
         }
         node = node->next;
     }
@@ -119,4 +121,16 @@ bool is_ignore(ignore_list *list, const char *path, const struct dirent *entry)
     }
 
     return false;
+}
+
+void free_ignore_list(ignore_list *list)
+{
+    ignore_list_node *node = list->first;
+    while (node) {
+        ignore_list_node *next = node->next;
+        /* free(node); */
+        node = next;
+    }
+
+    free(list);
 }
