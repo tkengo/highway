@@ -55,9 +55,17 @@ void print_to_terminal(const char *filename, file_queue_node *current, const hw_
 
     // If `file_with_matches` option is available, match results don't print on console.
     if (!op->file_with_matches) {
+        int old_line_no = -1;
         while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
+            if (old_line_no != match_line->line_no) {
+                if (old_line_no != -1) {
+                    printf("\n");
+                }
+                printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+            }
+
             if (current->t == FILE_TYPE_UTF8) {
-                printf("%s\n", match_line->line);
+                printf("%s", match_line->line);
             } else {
                 const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
                 char out[utf8_len_guess];
@@ -67,10 +75,12 @@ void print_to_terminal(const char *filename, file_queue_node *current, const hw_
                 } else if (current->t == FILE_TYPE_SHIFT_JIS) {
                     to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
                 }
-                printf("%s\n", out);
+                printf("%s", out);
             }
+
+            old_line_no = match_line->line_no;
         }
-        printf("\n");
+        printf("\n\n");
     }
 }
 

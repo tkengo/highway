@@ -52,15 +52,8 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
         int buffer_len = line_len + LINE_NO_ESCAPE_LEN + 10 + MATCH_WORD_ESCAPE_LEN * match_count_in_one_line;
 
         node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
-        node->line = (char *)malloc(sizeof(char) * buffer_len);
-
-        // Append line no. It has yellow color. But if stdout is redirected, the results will be
-        // printed with no color.
-        if (stdout_redirect_to()) {
-            sprintf(node->line, "%d:", current_line_no);
-        } else {
-            sprintf(node->line, "%s%d%s:", LINE_NO_COLOR, current_line_no, RESET_COLOR);
-        }
+        node->line_no = current_line_no;
+        node->line = (char *)calloc(buffer_len, sizeof(char));
 
         // If multiple matches in one line, for example:
         //

@@ -11,9 +11,7 @@ typedef struct _matched_line_queue_node matched_line_queue_node;
 
 struct _matched_line_queue_node {
     char *line;
-    int line_len;
-    int *starts;
-    int starts_len;
+    int line_no;
     matched_line_queue_node *next;
 };
 
