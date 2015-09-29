@@ -169,8 +169,8 @@ int ssabs(const unsigned char *buf,
         }
     }
 
-    *last_line_start      = line_start;
-    *last_line_no         = line_no;
+    *last_line_start = line_start;
+    *last_line_no    = line_no;
 
     return match_count;
 }
@@ -314,15 +314,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
          sum_of_match_count        += match_count;
         *sum_of_actual_match_count += actual_match_count;
 
-        if (!eof) {
-            // If there is too long line over 65536 bytes, reallocate the twice memory for the
-            // current buffer, then search again.
-            if (last_line_start == 0) {
-                n *= 2;
-                buf = (char *)realloc(buf, sizeof(char) * n);
-                continue;
-            }
-
+        if (!eof && last_line_start > 0) {
             while (match_count > 0 && matches[match_count - 1].line_no == line_no_offset) {
                 match_count--;
             }
@@ -342,7 +334,11 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
         // If we can't read the contents from the file one time, we should read from the position
         // of the head of the last line in the next iteration because the contents may be broken up.
         // So the file pointer will be seeked, then the next iteration starts from there.
-        read_bytes += last_line_start;
+        if (last_line_start > 0) {
+            read_bytes += last_line_start;
+        } else {
+            read_bytes += n - op->pattern_len + 1;
+        }
         lseek(fd, read_bytes, SEEK_SET);
     }
 
