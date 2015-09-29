@@ -59,11 +59,20 @@ bool find_target_files(file_queue *queue,
         }
     }
 
+    bool need_free = false;
     if (!op->all_files) {
-        if (ignores == NULL) {
-            ignores = create_ignore_list_from_gitignore(path);
-        } else {
-            ignores = create_ignore_list_from_list(path, ignores);
+        sprintf(buf, "%s/%s", path, ".gitignore");
+        if (access(buf, F_OK) == 0) {
+            // Create search ignore list from the .gitignore file. New list is created if there are
+            // not ignore file upper directories, otherwise the list will be inherited.
+            if (ignores == NULL) {
+                ignores = create_ignore_list_from_gitignore(path);
+                need_free = true;
+            } else {
+                ignore_list *old_ignores = ignores;
+                ignores = create_ignore_list_from_list(path, ignores);
+                need_free = old_ignores != ignores;
+            }
         }
     }
 
@@ -76,6 +85,7 @@ bool find_target_files(file_queue *queue,
             continue;
         }
 
+        // Check whether if the file is ignored by gitignore. If it is ignored, skip finding.
         sprintf(buf, "%s/%s", path, entry->d_name);
         if (!op->all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
             continue;
@@ -88,7 +98,7 @@ bool find_target_files(file_queue *queue,
         }
     }
 
-    if (ignores != NULL) {
+    if (ignores != NULL && need_free) {
         free_ignore_list(ignores);
     }
 
