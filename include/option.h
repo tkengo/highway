@@ -17,5 +17,6 @@ typedef struct _hw_option {
 } hw_option;
 
 void init_option(int argc, char **argv, hw_option *op);
+void free_option(hw_option *op);
 
 #endif // _HW_OPTION_H_

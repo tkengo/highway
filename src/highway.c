@@ -172,6 +172,7 @@ int main(int argc, char **argv)
 
     destroy_mutex();
     close_iconv();
+    free_option(&op);
 
     if (op.use_regex) {
         onig_end_wrap();

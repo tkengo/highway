@@ -18,6 +18,7 @@ void init_option(int argc, char **argv, hw_option *op)
         { "all-files",         no_argument,       NULL,  'a' },
         { "file-with-matches", no_argument,       NULL,  'l' },
         { "help",              no_argument,       NULL,  'h' },
+        { "word-regexp",       no_argument,       NULL,  'w' },
         { "debug",             no_argument,       &flag, 1   },
         { "worker",            required_argument, &flag, 2   },
         { "no-omit",           no_argument,       &flag, 3   },
@@ -33,7 +34,8 @@ void init_option(int argc, char **argv, hw_option *op)
     op->no_omit           = false;
 
     int ch;
-    while ((ch = getopt_long(argc, argv, "aehl", longopts, NULL)) != -1) {
+    bool word_regex = false;
+    while ((ch = getopt_long(argc, argv, "aehlw", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -66,6 +68,10 @@ void init_option(int argc, char **argv, hw_option *op)
                 op->file_with_matches = true;
                 break;
 
+            case 'w': /* Match only whole word */
+                word_regex = true;
+                break;
+
             case '?':
             default:
                 usage();
@@ -78,7 +84,16 @@ void init_option(int argc, char **argv, hw_option *op)
         exit(1);
     }
 
-    op->pattern = argv[optind++];
+    char *pattern = argv[optind++];
+    if (word_regex) {
+        op->pattern = (char *)malloc(sizeof(char) * (strlen(pattern) + 5));
+        sprintf(op->pattern, "\\b%s\\b", pattern);
+        op->use_regex = true;
+    } else {
+        op->pattern = (char *)malloc(sizeof(char) * (strlen(pattern) + 1));
+        strcpy(op->pattern, pattern);
+    }
+
     op->pattern_len = strlen(op->pattern);
     int paths_count = argc - optind;
     if (paths_count > MAX_PATHS_COUNT) {
@@ -96,4 +111,9 @@ void init_option(int argc, char **argv, hw_option *op)
         }
         op->paths_count = paths_count;
     }
+}
+
+void free_option(hw_option *op)
+{
+    free(op->pattern);
 }
