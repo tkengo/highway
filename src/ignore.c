@@ -59,14 +59,21 @@ ignore_list *create_ignore_list_from_gitignore(const char *path)
     list->first = NULL;
     list->last  = NULL;
 
+    int count = 0;
     while (fgets(buf, 1024, fp) != NULL) {
         trim(buf);
         if (buf[0] == '#' || buf[0] == '!') {
             continue;
         }
         add_ignore_list(list, path, buf);
+        count++;
     }
     fclose(fp);
+
+    if (count == 0) {
+        free(list);
+        return NULL;
+    }
 
     return list;
 }
