@@ -8,6 +8,8 @@
 #include "util.h"
 #include "oniguruma.h"
 
+#define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
+
 static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
 
@@ -29,9 +31,9 @@ void generate_bad_character_table(const char *pattern, enum file_type t)
 }
 
 /**
- * Format search results. This method does formatting results every line and colorize results.
+ * Format search results. This method does formatting and colorize for every lines.
  */
-int format(const char *buf, const match *matches, int match_count, int read_len, const hw_option *op, matched_line_queue *match_lines)
+int format(const char *buf, int read_len, const match *matches, int match_count, const hw_option *op, matched_line_queue *match_lines)
 {
     int match_line_count = 0;
     matched_line_queue_node *node;
@@ -90,7 +92,7 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
         }
 
         // Concatenate suffix.
-        strncat(node->line, buf + print_start, line_end - print_start);
+        strncat(node->line, buf + print_start, line_end - print_start + 1);
         enqueue_matched_line(match_lines, node);
 
         match_line_count++;
@@ -147,7 +149,7 @@ int ssabs(const unsigned char *buf,
             if (t == 0x0A || t == 0x0D) {
                 int l = match_count - 1;
                 while (l >= 0 && matches[l].line_end == -1 && line_no == matches[l].line_no) {
-                    matches[l].line_end = j + k;
+                    matches[l].line_end = j + k - 1;
                     l--;
                 }
 
@@ -163,7 +165,7 @@ int ssabs(const unsigned char *buf,
         if (t == 0x0A || t == 0x0D) {
             int l = match_count - 1;
             while (l >= 0 && matches[l].line_end == -1 && line_no == matches[l].line_no) {
-                matches[l].line_end = j - 1;
+                matches[l].line_end = j - 2;
                 l--;
             }
 
@@ -260,10 +262,10 @@ int regex(const unsigned char *buf,
  */
 int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines, int *sum_of_actual_match_count)
 {
-    int n = N, m = strlen(pattern);
+    int m = strlen(pattern);
     int read_len, actual_match_count, last_line_start;
     int line_no_offset = 1, sum_of_match_count = 0, read_bytes = 0;
-    char *buf = (char *)malloc(sizeof(char) * n);
+    char *buf = (char *)malloc(sizeof(char) * N);
 
     if (!op->use_regex) {
         generate_bad_character_table(pattern, t);
@@ -273,9 +275,9 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
     // Read every N(65536) bytes until reach to EOF. This method is efficient for memory if file
     // size is very large. And maybe, almost source code files falls within 65536 bytes, so almost
     // files finishes 1 time read.
-    while ((read_len = read(fd, buf, n)) > 0) {
+    while ((read_len = read(fd, buf, N)) > 0) {
         // Check if pointer was reached to the end of the file.
-        bool eof = read_len < n;
+        bool eof = read_len < N;
 
         int match_size = read_len / m;
         if (match_size > MAX_MATCH_COUNT && !op->no_omit) {
@@ -317,37 +319,36 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
          sum_of_match_count        += match_count;
         *sum_of_actual_match_count += actual_match_count;
 
-        if (!eof && last_line_start > 0) {
-            while (match_count > 0 && matches[match_count - 1].line_no == line_no_offset) {
-                match_count--;
+        if (!eof) {
+            if (last_line_start > 0) {
+                while (match_count > 0 && matches[match_count - 1].line_no == line_no_offset) {
+                    match_count--;
+                }
+            } else {
+                if (match_count == 0 || matches[match_count - 1].end < read_len) {
+                    read_len -= op->pattern_len;
+                }
+                while (!is_utf8_lead_byte(buf[read_len])) {
+                    read_len--;
+                }
             }
         }
 
         // Format search results.
         // This step will be skiped if `file_with_matches` option (shows only filenames) was passed
         // when the program was launched because the result buffer is not necessary.
-        if (!op->file_with_matches) {
-            format(buf, matches, match_count, read_len, op, match_lines);
+        if (!op->file_with_matches && match_count > 0) {
+            format(buf, read_len, matches, match_count, op, match_lines);
         }
 
         if (eof) {
             break;
         }
 
-        // If we can't read the contents from the file one time, we should read from the position
-        // of the head of the last line in the next iteration because the contents may be broken up.
-        // So the file pointer will be seeked, then the next iteration starts from there.
-        if (last_line_start > 0) {
-            read_bytes += last_line_start;
-        } else if (match_count > 0) {
-            if (matches[match_count - 1].end >= n - op->pattern_len) {
-                read_bytes += n;
-            } else {
-                read_bytes += n - op->pattern_len;
-            }
-        } else {
-            read_bytes += n;
-        }
+        // If we can't read the contents from the file one time, we should seek the file pointer
+        // because the contents read from fd may be broken up. So the file pointer will be seeked,
+        // then the next iteration starts from there.
+        read_bytes += last_line_start > 0 ? last_line_start : read_len;
         lseek(fd, read_bytes, SEEK_SET);
     }
 
