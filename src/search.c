@@ -39,6 +39,9 @@ int format(const char *buf, const match *matches, int match_count, int read_len,
     for (int i = 0; i < match_count; ) {
         // Find the end of the line.
         int line_end = matches[i].line_end;
+        if (line_end == -1) {
+            line_end = read_len - 1;
+        }
 
         // Calculate count of the match elements in one line.
         int current_line_no = matches[i].line_no, j = i;
