@@ -223,6 +223,7 @@ int regex(const unsigned char *buf,
                             matches[match_count].end        = region->end[0];
                             matches[match_count].line_no    = line_no;
                             matches[match_count].line_start = line_start;
+                            matches[match_count].line_end   = -1;
                             match_count++;
                         }
                         (*actual_match_count)++;
@@ -235,6 +236,12 @@ int regex(const unsigned char *buf,
                         break;
                     }
                 }
+            }
+
+            int l = match_count - 1;
+            while (l >= 0 && matches[l].line_end == -1 && line_no == matches[l].line_no) {
+                matches[l].line_end = i - 1;
+                l--;
             }
 
             line_start = i + 1;
