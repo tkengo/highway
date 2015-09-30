@@ -333,7 +333,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 }
             } else {
                 if (match_count == 0 || matches[match_count - 1].end < read_len) {
-                    read_len -= op->pattern_len;
+                    read_len -= op->use_regex ? 100 : op->pattern_len;
                 }
                 while (!is_utf8_lead_byte(buf[read_len])) {
                     read_len--;
