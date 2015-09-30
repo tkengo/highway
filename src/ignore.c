@@ -10,9 +10,15 @@
 
 ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ignore)
 {
+    bool acceptable = ignore[0] == '!';
+    if (acceptable) {
+        ignore++;
+    }
+
     ignore_list_node *node = (ignore_list_node *)malloc(sizeof(ignore_list_node));
 
     node->next = NULL;
+
     node->is_root = *ignore == '/';
     node->base_len = strlen(base);
 
@@ -29,12 +35,22 @@ ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ign
         strcpy(node->ignore, ignore);
     }
 
-    if (list->first) {
-        list->last->next = node;
-        list->last = node;
+    if (acceptable) {
+        if (list->acceptable_first) {
+            list->acceptable_last->next = node;
+            list->acceptable_last = node;
+        } else {
+            list->acceptable_first = node;
+            list->acceptable_last  = node;
+        }
     } else {
-        list->first = node;
-        list->last  = node;
+        if (list->first) {
+            list->last->next = node;
+            list->last = node;
+        } else {
+            list->first = node;
+            list->last  = node;
+        }
     }
 
     return node;
@@ -58,11 +74,13 @@ ignore_list *create_ignore_list_from_gitignore(const char *path)
     ignore_list *list = (ignore_list *)malloc(sizeof(ignore_list));
     list->first = NULL;
     list->last  = NULL;
+    list->acceptable_first = NULL;
+    list->acceptable_last  = NULL;
 
     int count = 0;
     while (fgets(buf, 1024, fp) != NULL) {
         trim(buf);
-        if (buf[0] == '#' || buf[0] == '!') {
+        if (buf[0] == '#') {
             continue;
         }
         add_ignore_list(list, path, buf);
@@ -99,10 +117,8 @@ ignore_list *create_ignore_list_from_list(const char *path, ignore_list *list)
     return new_list;
 }
 
-bool is_ignore(ignore_list *list, const char *path, const struct dirent *entry)
+bool match_path(ignore_list_node *node, const char *path, const struct dirent *entry)
 {
-    ignore_list_node *node = list->first;
-
     while (node) {
         if (node->is_dir && !is_directory(entry)) {
             node = node->next;
@@ -130,12 +146,21 @@ bool is_ignore(ignore_list *list, const char *path, const struct dirent *entry)
     return false;
 }
 
+bool is_ignore(ignore_list *list, const char *path, const struct dirent *entry)
+{
+    if (match_path(list->acceptable_first, path, entry)) {
+        return false;
+    }
+
+    return match_path(list->first, path, entry);
+}
+
 void free_ignore_list(ignore_list *list)
 {
     ignore_list_node *node = list->first;
     while (node) {
         ignore_list_node *next = node->next;
-        /* free(node); */
+        free(node);
         node = next;
     }
 
