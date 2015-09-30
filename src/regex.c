@@ -44,7 +44,7 @@ void onig_end_wrap()
 /**
  * Thread safety onig_new.
  */
-regex_t *onig_new_wrap(const char *pattern, enum file_type t)
+regex_t *onig_new_wrap(const char *pattern, enum file_type t, bool ignore_case)
 {
     if (reg[t] != NULL) {
         return reg[t];
@@ -66,7 +66,8 @@ regex_t *onig_new_wrap(const char *pattern, enum file_type t)
             break;
     }
     pthread_mutex_lock(&onig_mutex);
-    int r = onig_new(&reg[t], p, p + strlen(pattern), ONIG_OPTION_DEFAULT, enc, ONIG_SYNTAX_DEFAULT, &einfo);
+    long option = ignore_case ? ONIG_OPTION_IGNORECASE : ONIG_OPTION_DEFAULT;
+    int r = onig_new(&reg[t], p, p + strlen(pattern), option, enc, ONIG_SYNTAX_DEFAULT, &einfo);
     pthread_mutex_unlock(&onig_mutex);
 
     if (r != ONIG_NORMAL) {

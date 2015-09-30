@@ -14,6 +14,7 @@ typedef struct _hw_option {
     bool use_regex;
     bool all_files;
     bool no_omit;
+    bool ignore_case;
 } hw_option;
 
 void init_option(int argc, char **argv, hw_option *op);

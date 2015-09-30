@@ -190,6 +190,7 @@ int regex(const unsigned char *buf,
           match *matches,
           int max_match_size,
           enum file_type t,
+          bool ignore_case,
           int *actual_match_count,
           int *last_line_start,
           int *last_line_no)
@@ -201,7 +202,7 @@ int regex(const unsigned char *buf,
 
     // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
     // but this wrapper method of the onig_new is implemented in thread safety.
-    regex_t *reg = onig_new_wrap(pattern, t);
+    regex_t *reg = onig_new_wrap(pattern, t, ignore_case);
     if (reg == NULL) {
         return 0;
     }
@@ -303,6 +304,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
                 matches,
                 match_size,
                 t,
+                op->ignore_case,
                 &actual_match_count,
                 &last_line_start,
                 &line_no_offset

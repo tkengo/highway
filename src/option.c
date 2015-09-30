@@ -16,8 +16,9 @@ void init_option(int argc, char **argv, hw_option *op)
 
     static struct option longopts[] = {
         { "all-files",         no_argument,       NULL,  'a' },
-        { "file-with-matches", no_argument,       NULL,  'l' },
         { "help",              no_argument,       NULL,  'h' },
+        { "ignore-case",       no_argument,       NULL,  'i' },
+        { "file-with-matches", no_argument,       NULL,  'l' },
         { "word-regexp",       no_argument,       NULL,  'w' },
         { "debug",             no_argument,       &flag, 1   },
         { "worker",            required_argument, &flag, 2   },
@@ -32,10 +33,11 @@ void init_option(int argc, char **argv, hw_option *op)
     op->use_regex         = false;
     op->all_files         = false;
     op->no_omit           = false;
+    op->ignore_case       = false;
 
     int ch;
     bool word_regex = false;
-    while ((ch = getopt_long(argc, argv, "aehlw", longopts, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "aehilw", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -62,6 +64,11 @@ void init_option(int argc, char **argv, hw_option *op)
             case 'h': /* Show help */
                 usage();
                 exit(0);
+                break;
+
+            case 'i': /* Ignore case */
+                op->ignore_case = true;
+                op->use_regex   = true;
                 break;
 
             case 'l': /* Show only filenames */
