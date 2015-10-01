@@ -7,6 +7,7 @@
 #include "color.h"
 #include "util.h"
 #include "oniguruma.h"
+#include "string.h"
 
 #define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
 
@@ -104,8 +105,48 @@ int format(const char *buf, int read_len, const match *matches, int match_count,
 /**
  * A fast pattern matching algorithm.
  * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
+ *
+ * This method search the pattern from the position of the `buf` to `buf` + `buf_len` in file type
+ * `t`. Return true if the pattern was matched, otherwise false.
+ * When the pattern was matched, `offset` will be set the first matched position from the `buf`,
+ * and `size` will be set the current line length.
  */
-int ssabs(const unsigned char *buf,
+bool ssabs(const unsigned char *buf,
+           int buf_len,
+           const unsigned char *pattern,
+           enum file_type t,
+           int *offset,
+           int *size)
+{
+    int j = 0, m = strlen((char *)pattern);
+    int match_count = 0;
+    unsigned char firstCh = pattern[0];
+    unsigned char lastCh  = pattern[m - 1];
+
+    while (j <= buf_len - m) {
+        if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
+            for (int i = m - 2; i >= 0 && pattern[i] == buf[j + i]; --i) {
+                if (i <= 0) {
+                    // Pattern matched.
+                    rawmemchr(buf + j + m, '\n', buf_len - j - m);
+                    return true;
+                }
+            }
+        }
+        j += tbl[t][buf[j + m]];
+    }
+
+    *offset = -1;
+    *size   = -1;
+
+    return false;
+}
+
+/**
+ * A fast pattern matching algorithm.
+ * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
+ */
+int ssabs_(const unsigned char *buf,
           int buf_len,
           int line_no_offset,
           const char *pattern,
@@ -311,7 +352,7 @@ int search(int fd, const char *pattern, const hw_option *op, enum file_type t, m
             );
         } else {
             // Using SSABS pattern matching algorithm.
-            match_count = ssabs(
+            match_count = ssabs_(
                 (unsigned char *)buf,
                 read_len,
                 line_no_offset,
