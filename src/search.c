@@ -8,6 +8,7 @@
 #include "util.h"
 #include "oniguruma.h"
 #include "string.h"
+#include "glibc.h"
 
 #define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
 
@@ -115,11 +116,10 @@ bool ssabs(const unsigned char *buf,
            int buf_len,
            const unsigned char *pattern,
            enum file_type t,
-           int *offset,
-           int *size)
+           size_t *offset,
+           size_t *size)
 {
     int j = 0, m = strlen((char *)pattern);
-    int match_count = 0;
     unsigned char firstCh = pattern[0];
     unsigned char lastCh  = pattern[m - 1];
 
@@ -128,7 +128,10 @@ bool ssabs(const unsigned char *buf,
             for (int i = m - 2; i >= 0 && pattern[i] == buf[j + i]; --i) {
                 if (i <= 0) {
                     // Pattern matched.
-                    rawmemchr(buf + j + m, '\n', buf_len - j - m);
+                    char *head = glibc_memrchr  (buf + j,     '\n', j);
+                    char *end  = glibc_rawmemchr(buf + j + m, '\n');
+                    *offset = head - buf;
+                    *size   = end - offset;
                     return true;
                 }
             }
@@ -140,6 +143,21 @@ bool ssabs(const unsigned char *buf,
     *size   = -1;
 
     return false;
+}
+
+int search(int fd, const char *pattern, const hw_option *op)
+{
+    size_t offset, size;
+    if (!op->use_regex) {
+        generate_bad_character_table(pattern, t);
+    }
+    *sum_of_actual_match_count = 0;
+
+    while ((read_len = read(fd, buf, N)) > 0) {
+        // Check if pointer was reached to the end of the file.
+        bool eof = read_len < N;
+    }
+    return 1;
 }
 
 /**
@@ -309,7 +327,7 @@ int regex(const unsigned char *buf,
  * @param op The pattern string is included this struct.
  * @return The count of the matched lines.
  */
-int search(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines, int *sum_of_actual_match_count)
+int search_(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines, int *sum_of_actual_match_count)
 {
     int m = strlen(pattern);
     int read_len, actual_match_count, last_line_start;
