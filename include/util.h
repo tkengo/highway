@@ -1,6 +1,8 @@
 #ifndef _HW_UTIL_H_
 #define _HW_UTIL_H_
 
+#define MIN(a,b) ((a) < (b)) ? (a) : (b)
+
 char *trim(char *str);
 void init_iconv();
 void close_iconv();

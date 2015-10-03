@@ -7,7 +7,7 @@ GCC = gcc
 .PHONY: clean
 
 BUILD_DIR = tmp/build/
-INCLUDE = -Iinclude -Ivendor/onigmo -Ivendor/glibc
+INCLUDE = -Iinclude -Ivendor/onigmo
 LIB = -L/usr/local/lib -liconv
 CFLAGS = -O3
 SOURCES = \
@@ -22,7 +22,6 @@ SOURCES = \
 		  util.c \
 		  regex.c \
 		  help.c \
-		  vendor/glibc/rawmemchr.c \
 		  vendor/onigmo/regcomp.c \
 		  vendor/onigmo/regenc.c \
 		  vendor/onigmo/regerror.c \

@@ -8,12 +8,21 @@
 #include "util.h"
 #include "oniguruma.h"
 #include "string.h"
-#include "glibc.h"
 
 #define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
 
 static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
+
+char *reverse_char(const char *buf, char c, size_t n)
+{
+    unsigned char *p = (unsigned char *)buf;;
+    unsigned char uc = c;
+    while (--n != 0) {
+        if (buf[n] == uc) return (char *)buf + n;
+    }
+    return p[n] == uc ? (char *)p : NULL;
+}
 
 void generate_bad_character_table(const char *pattern, enum file_type t)
 {
@@ -108,56 +117,174 @@ int format(const char *buf, int read_len, const match *matches, int match_count,
  * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
  *
  * This method search the pattern from the position of the `buf` to `buf` + `buf_len` in file type
- * `t`. Return true if the pattern was matched, otherwise false.
- * When the pattern was matched, `offset` will be set the first matched position from the `buf`,
- * and `size` will be set the current line length.
+ * `t`. Return matched position if the pattern was matched, otherwise -1.
  */
-bool ssabs(const unsigned char *buf,
-           int buf_len,
-           const unsigned char *pattern,
-           enum file_type t,
-           size_t *offset,
-           size_t *size)
+int ssabs(const char *buf,
+          int search_len,
+          const char *pattern,
+          int pattern_len,
+          enum file_type t)
 {
-    int j = 0, m = strlen((char *)pattern);
+    const unsigned char *ubuf = (unsigned char *)buf;
+    int j = 0, m = pattern_len;
     unsigned char firstCh = pattern[0];
     unsigned char lastCh  = pattern[m - 1];
 
-    while (j <= buf_len - m) {
-        if (lastCh == buf[j + m - 1] && firstCh == buf[j]) {
-            for (int i = m - 2; i >= 0 && pattern[i] == buf[j + i]; --i) {
+    while (j <= search_len - m) {
+        if (lastCh == ubuf[j + m - 1] && firstCh == ubuf[j]) {
+            for (int i = m - 2; i >= 0 && (unsigned char)pattern[i] == ubuf[j + i]; --i) {
                 if (i <= 0) {
                     // Pattern matched.
-                    char *head = glibc_memrchr  (buf + j,     '\n', j);
-                    char *end  = glibc_rawmemchr(buf + j + m, '\n');
-                    *offset = head - buf;
-                    *size   = end - offset;
-                    return true;
+                    return j;
                 }
             }
         }
-        j += tbl[t][buf[j + m]];
+        j += tbl[t][ubuf[j + m]];
     }
 
-    *offset = -1;
-    *size   = -1;
+    /* *offset = -1; */
+    /* *size   = -1; */
 
-    return false;
+    return -1;
 }
 
-int search(int fd, const char *pattern, const hw_option *op)
+int format_line(const char *line,
+                int line_len,
+                const char *pattern,
+                int pattern_len,
+                enum file_type t,
+                int line_no,
+                match *matches,
+                int match_start,
+                matched_line_queue *match_line)
 {
-    size_t offset, size;
+    int pos = 0, match_count = match_start;
+    int offset = matches[match_start - 1].end;
+
+    while ((pos = ssabs(line + offset, line_len - offset, pattern, pattern_len, t)) != -1) {
+        pos += offset;
+
+        int end = pos + pattern_len;
+        matches[match_count].start = pos;
+        matches[match_count].end   = end;
+        match_count++;
+
+        offset = end;
+    }
+
+    int buffer_len = line_len + MATCH_WORD_ESCAPE_LEN * match_count;
+    matched_line_queue_node *node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
+    node->line_no = line_no;
+    node->line = (char *)calloc(buffer_len, sizeof(char));
+
+    const char *s = line;
+    int old_end = 0;
+    for (int i = 0; i < match_count; i++) {
+        int prefix_len = matches[i].start - old_end;
+
+        strncat(node->line, s, prefix_len);
+        strcat (node->line, MATCH_WORD_COLOR);
+        strncat(node->line, s + prefix_len, pattern_len);
+        strcat (node->line, RESET_COLOR);
+
+        s += prefix_len + pattern_len;
+        old_end = matches[i].end;
+    }
+
+    int last_end = matches[match_count - 1].end;
+    strncat(node->line, s, line_len - last_end);
+    enqueue_matched_line(match_line, node);
+
+    return match_count;
+}
+
+int search(int fd, const char *pattern, enum file_type t, const hw_option *op, matched_line_queue *match_line)
+{
     if (!op->use_regex) {
         generate_bad_character_table(pattern, t);
     }
-    *sum_of_actual_match_count = 0;
 
-    while ((read_len = read(fd, buf, N)) > 0) {
-        // Check if pointer was reached to the end of the file.
-        bool eof = read_len < N;
+    unsigned int line_count = 0;
+    int read_len, pos, pattern_len = strlen(pattern);
+    size_t read_sum = 0, all_sum;
+    size_t n = N, pagesize = getpagesize();
+    int buf_offset = 0;
+    char *buf = (char *)malloc(sizeof(char) * (N + pagesize));
+    char *last_new_line_pos = buf;
+    int match_count_sum = 0;
+    while ((read_len = read(fd, buf + buf_offset, N)) > 0) {
+        read_sum += read_len;
+        /* printf("read_sum: %ld\n", read_sum); */
+        char *last_line_end = reverse_char(buf + buf_offset, '\n', read_len);
+        if (last_line_end == NULL) {
+            if (n <= read_sum + buf_offset + N) {
+                n += N;
+                char *new_buf = (char *)malloc(sizeof(char) * (n + pagesize));
+                memcpy(new_buf, buf, read_sum);
+                free(buf);
+                buf = last_new_line_pos = new_buf;
+        /* printf("=========== buf =================\n%s\n", buf); */
+            }
+            buf_offset += read_len;
+            continue;
+        }
+
+        size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
+        size_t org_search_len = search_len;
+        char *p = buf;
+        /* printf("=========== p =================, %ld\n%s\n", search_len, p); */
+        while ((pos = ssabs(p, search_len, pattern, pattern_len, t)) != -1) {
+            // Searching head/end of the line.
+            char *line_head = reverse_char(p, '\n', pos);
+            char *line_end  = memchr(p + pos + pattern_len, '\n', search_len - pos - pattern_len + 1);
+            line_head = line_head == NULL ? p : line_head + 1;
+            int line_len = line_end - line_head;
+            char *start = last_new_line_pos;
+            while (start < line_end && (start = memchr(start, '\n', line_end - start + 1)) != NULL) {
+                start++;
+                line_count++;
+            }
+            last_new_line_pos = line_end + 1;
+
+            match matches[MIN(line_len / pattern_len, MAX_MATCH_COUNT)];
+            matches[0].start = pos - (line_head - p);
+            matches[0].end   = matches[0].start + pattern_len;
+            int match_count = format_line(line_head, line_len, pattern, pattern_len, t, line_count, matches, 1, match_line);
+            match_count_sum += match_count;
+
+            search_len -= line_end - p + 1;
+            p = line_end + 1;
+            /* search_len -= line_len; */
+            /* p += line_len + 1; */
+        }
+
+        if (read_len < N) {
+            break;
+        }
+
+        buf_offset = 0;
+
+        last_line_end++;
+        size_t rest = read_sum - org_search_len;
+        char *new_buf;
+        if (n < N + rest) {
+            n += N;
+            new_buf = (char *)calloc((n + pagesize), sizeof(char));
+            memcpy(new_buf, last_line_end, rest - 1);
+            free(buf);
+        } else {
+            new_buf = buf;
+            memmove(new_buf, last_line_end, rest - 1);
+        }
+        buf = last_new_line_pos = new_buf;
+        buf_offset = rest - 1;
+        read_sum = rest - 1;
+        /* printf("=========== new_buf =================\n%s\n", buf); */
+        /* printf("--- rest ---: %ld, %ld\n", read_sum, n); */
     }
-    return 1;
+
+    free(buf);
+    return match_count_sum;
 }
 
 /**

@@ -118,7 +118,8 @@ int process_by_terminal(hw_option *op)
     log_d("%d threads was launched for searching.", op->worker);
 
     for (int i = 0; i < op->paths_count; i++) {
-        find_target_files(queue, op->root_paths[i], NULL, op);
+        ignore_list *ignores = create_ignore_list_from_gitignore(".");
+        find_target_files(queue, op->root_paths[i], ignores, op);
     }
     complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);
