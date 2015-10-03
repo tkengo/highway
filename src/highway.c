@@ -98,7 +98,7 @@ bool find_target_files(file_queue *queue,
         }
     }
 
-    if (ignores != NULL && need_free) {
+    if (!op->all_files && ignores != NULL && need_free) {
         free_ignore_list(ignores);
     }
 
@@ -117,8 +117,13 @@ int process_by_terminal(hw_option *op)
     pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
     log_d("%d threads was launched for searching.", op->worker);
 
+    ignore_list *ignores = NULL;
     for (int i = 0; i < op->paths_count; i++) {
-        find_target_files(queue, op->root_paths[i], NULL, op);
+        char *path = op->root_paths[i];
+        if (ignores == NULL && strcmp(path, ".") != 0) {
+            ignores = create_ignore_list_from_gitignore(".");
+        }
+        find_target_files(queue, path, ignores, op);
     }
     complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);

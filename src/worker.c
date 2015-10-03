@@ -209,21 +209,22 @@ void *search_worker(void *arg)
             }
 
             // Searching.
-            int actual_match_count;
-            matched_line_queue *match_lines = create_matched_line_queue();
-            int match_count = search(fd, pattern, params->op, t, match_lines, &actual_match_count);
+            int actual_match_count = 0;
+            matched_line_queue *match_line = create_matched_line_queue();
+            /* int match_count = search(fd, pattern, params->op, t, match_line, &actual_match_count); */
+            int match_count = search(fd, pattern, t, params->op, match_line);
 
             if (match_count > 0) {
                 // Set additional data to the queue data because it will be used on print worker in
-                // order to print results to the console. `match_lines` variable will be released
+                // order to print results to the console. `match_line` variable will be released
                 // along with the file queue when it is released.
                 current->matched      = true;
-                current->match_lines  = match_lines;
+                current->match_lines  = match_line;
                 current->t            = t;
                 current->omit_matches = match_count < actual_match_count;
             } else {
                 // If the pattern was not matched, the lines queue is no longer needed, so do free.
-                free_matched_line_queue(match_lines);
+                free_matched_line_queue(match_line);
             }
         }
 
