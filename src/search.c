@@ -14,14 +14,36 @@
 static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
 
+static int betap[100 + 1];
+
 char *reverse_char(const char *buf, char c, size_t n)
 {
-    unsigned char *p = (unsigned char *)buf;;
+    if (n == 0) {
+        return NULL;
+    }
+
+    unsigned char *p = (unsigned char *)buf;
     unsigned char uc = c;
     while (--n != 0) {
         if (buf[n] == uc) return (char *)buf + n;
     }
     return p[n] == uc ? (char *)p : NULL;
+}
+
+void makebetap(const char *pattern, int m)
+{
+    const unsigned char *p = (unsigned char *)pattern;
+    int i = 0, j = betap[0] = -1;
+    while (i < m) {
+        while (j > -1 && p[i] != p[j]) {
+            j = betap[j];
+        }
+        if (p[++i] == p[++j]) {
+            betap[i] = betap[j];
+        } else {
+            betap[i] = j;
+        }
+    }
 }
 
 void generate_bad_character_table(const char *pattern, enum file_type t)
@@ -31,14 +53,61 @@ void generate_bad_character_table(const char *pattern, enum file_type t)
     }
 
     int i, m = strlen(pattern);
+    const unsigned char *p = (unsigned char *)pattern;
     for (i = 0; i < TABLE_SIZE; ++i) {
         tbl[t][i] = m + 1;
     }
     for (i = 0; i < m; ++i) {
-        tbl[t][(unsigned char)pattern[i]] = m - i;
+        tbl[t][p[i]] = m - i;
     }
 
+    makebetap(pattern, m);
     tbl_created[t] = true;
+}
+
+int fjs(const char *buf, int search_len, const char *pattern, int pattern_len, enum file_type t)
+{
+    const unsigned char *p = (unsigned char *)pattern;
+    const unsigned char *x = (unsigned char *)buf;
+    int n = search_len, m = pattern_len;
+
+    if (m < 1) {
+        return -1;
+    }
+
+    int i = 0, j = 0, mp = m - 1, ip = mp;
+    while (ip < n) {
+        if (j <= 0) {
+            while (p[mp] != x[ip]) {
+                ip += tbl[t][x[ip + 1]];
+                if (ip >= n) return -1;
+            }
+            j = 0;
+            i = ip - mp;
+            while (j < mp && x[i] == p[j]) {
+                i++; j++;
+            }
+            if (j == mp) {
+                return i - mp;
+            }
+            if (j <= 0) {
+                i++;
+            } else {
+                j = betap[j];
+            }
+        } else {
+            while (j < m && x[i] == p[j]) {
+                i++; j++;
+            }
+            if (j == m) {
+                return i - m;
+            }
+            j = betap[j];
+        }
+        ip = i + mp - j;
+    }
+
+    return -1;
 }
 
 /**
@@ -112,6 +181,70 @@ int format(const char *buf, int read_len, const match *matches, int match_count,
     return match_line_count;
 }
 
+char *scan_newline(char *from, char *to, size_t *line_count)
+{
+    const char *start = from;
+    while (start <= to && (start = memchr(start, '\n', to - start + 1)) != NULL) {
+        start++;
+        (*line_count)++;
+    }
+    from = to + 1;
+    return from;
+}
+
+char *grow_buf_if_shortage(size_t *cur_buf_size,
+                           size_t need_size,
+                           int buf_offset,
+                           char *copy_buf,
+                           char *current_buf)
+{
+    char *new_buf;
+    if (*cur_buf_size < need_size + buf_offset + N) {
+        *cur_buf_size += N;
+        new_buf = (char *)calloc(*cur_buf_size, sizeof(char));
+        memcpy(new_buf, copy_buf, need_size);
+        free(current_buf);
+    } else {
+        new_buf = copy_buf;
+    }
+
+    return new_buf;
+}
+
+int regex(const char *buf,
+          size_t search_len,
+          const char *pattern,
+          int pattern_len,
+          enum file_type t,
+          const hw_option *op)
+{
+    OnigRegion *region = onig_region_new();
+
+    // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
+    // but this wrapper method is implemented in thread safety.
+    regex_t *reg = onig_new_wrap(pattern, t, op->ignore_case);
+    if (reg == NULL) {
+        return -1;
+    }
+
+    // Search every lines using compiled regular expression above.
+    int pos = -1;
+    const unsigned char *p     = (unsigned char *)buf,
+                        *start = p,
+                        *end   = start + search_len,
+                        *range = end;
+    if (onig_search(reg, p, end, start, range, region, ONIG_OPTION_NONE) >= 0) {
+        /* matches[match_count].start      = region->beg[0]; */
+        /* matches[match_count].end        = region->end[0]; */
+        /* matches[match_count].line_no    = line_no; */
+        /* matches[match_count].line_end   = -1; */
+        pos = region->beg[0];
+    }
+
+    onig_region_free(region, 1);
+    return pos;
+}
+
 /**
  * A fast pattern matching algorithm.
  * This method was proposed by http://www.math.utah.edu/~palais/dnamath/patternmatching.pdf
@@ -126,13 +259,14 @@ int ssabs(const char *buf,
           enum file_type t)
 {
     const unsigned char *ubuf = (unsigned char *)buf;
+    const unsigned char *up   = (unsigned char *)pattern;
     int j = 0, m = pattern_len;
     unsigned char firstCh = pattern[0];
     unsigned char lastCh  = pattern[m - 1];
 
     while (j <= search_len - m) {
         if (lastCh == ubuf[j + m - 1] && firstCh == ubuf[j]) {
-            for (int i = m - 2; i >= 0 && (unsigned char)pattern[i] == ubuf[j + i]; --i) {
+            for (int i = m - 2; i >= 0 && up[i] == ubuf[j + i]; --i) {
                 if (i <= 0) {
                     // Pattern matched.
                     return j;
@@ -142,10 +276,22 @@ int ssabs(const char *buf,
         j += tbl[t][ubuf[j + m]];
     }
 
-    /* *offset = -1; */
-    /* *size   = -1; */
-
     return -1;
+}
+
+int search_by(const char *buf,
+              size_t search_len,
+              const char *pattern,
+              int pattern_len,
+              enum file_type t,
+              const hw_option *op)
+{
+    if (op->use_regex) {
+        return regex(buf, search_len, pattern, pattern_len, t, op);
+    } else {
+        /* return ssabs(buf, search_len, pattern, pattern_len, t); */
+        return fjs(buf, search_len, pattern, pattern_len, t);
+    }
 }
 
 int format_line(const char *line,
@@ -156,12 +302,13 @@ int format_line(const char *line,
                 int line_no,
                 match *matches,
                 int match_start,
+                const hw_option *op,
                 matched_line_queue *match_line)
 {
     int pos = 0, match_count = match_start;
     int offset = matches[match_start - 1].end;
 
-    while ((pos = ssabs(line + offset, line_len - offset, pattern, pattern_len, t)) != -1) {
+    while ((pos = search_by(line + offset, line_len - offset, pattern, pattern_len, t, op)) != -1) {
         pos += offset;
 
         int end = pos + pattern_len;
@@ -198,33 +345,38 @@ int format_line(const char *line,
     return match_count;
 }
 
-int search(int fd, const char *pattern, enum file_type t, const hw_option *op, matched_line_queue *match_line)
+/**
+ * Search the pattern from the file descriptor and add formatted matched lines to the queue if the
+ * pattern was matched on the read buffer.
+ */
+int search(int fd,
+           const char *pattern,
+           enum file_type t,
+           const hw_option *op,
+           matched_line_queue *match_line)
 {
+    size_t line_count = 0;
+    size_t read_sum = 0;
+    size_t n = N;
+    size_t read_len;
+    int pos;
+    int pattern_len = op->pattern_len;
+    int buf_offset = 0;
+    int match_count = 0;
+    char *buf = (char *)calloc(n, sizeof(char));
+    char *last_new_line_scan_pos = buf;
+
     if (!op->use_regex) {
         generate_bad_character_table(pattern, t);
     }
 
-    unsigned int line_count = 0;
-    int read_len, pos, pattern_len = strlen(pattern);
-    size_t read_sum = 0, all_sum;
-    size_t n = N, pagesize = getpagesize();
-    int buf_offset = 0;
-    char *buf = (char *)malloc(sizeof(char) * (N + pagesize));
-    char *last_new_line_pos = buf;
-    int match_count_sum = 0;
     while ((read_len = read(fd, buf + buf_offset, N)) > 0) {
         read_sum += read_len;
-        /* printf("read_sum: %ld\n", read_sum); */
+
+        // Search the end of the position of the last line.
         char *last_line_end = reverse_char(buf + buf_offset, '\n', read_len);
         if (last_line_end == NULL) {
-            if (n <= read_sum + buf_offset + N) {
-                n += N;
-                char *new_buf = (char *)malloc(sizeof(char) * (n + pagesize));
-                memcpy(new_buf, buf, read_sum);
-                free(buf);
-                buf = last_new_line_pos = new_buf;
-        /* printf("=========== buf =================\n%s\n", buf); */
-            }
+            buf = last_new_line_scan_pos = grow_buf_if_shortage(&n, read_sum, buf_offset, buf, buf);
             buf_offset += read_len;
             continue;
         }
@@ -232,59 +384,47 @@ int search(int fd, const char *pattern, enum file_type t, const hw_option *op, m
         size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
         size_t org_search_len = search_len;
         char *p = buf;
-        /* printf("=========== p =================, %ld\n%s\n", search_len, p); */
-        while ((pos = ssabs(p, search_len, pattern, pattern_len, t)) != -1) {
-            // Searching head/end of the line.
+        while ((pos = search_by(p, search_len, pattern, pattern_len, t, op)) != -1) {
+            // Searching head/end of the line, then calculate line length using them.
             char *line_head = reverse_char(p, '\n', pos);
             char *line_end  = memchr(p + pos + pattern_len, '\n', search_len - pos - pattern_len + 1);
             line_head = line_head == NULL ? p : line_head + 1;
             int line_len = line_end - line_head;
-            char *start = last_new_line_pos;
-            while (start < line_end && (start = memchr(start, '\n', line_end - start + 1)) != NULL) {
-                start++;
-                line_count++;
-            }
-            last_new_line_pos = line_end + 1;
+
+            // Count lines.
+            last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count);
 
             match matches[MIN(line_len / pattern_len, MAX_MATCH_COUNT)];
             matches[0].start = pos - (line_head - p);
             matches[0].end   = matches[0].start + pattern_len;
-            int match_count = format_line(line_head, line_len, pattern, pattern_len, t, line_count, matches, 1, match_line);
-            match_count_sum += match_count;
+            match_count += format_line(line_head, line_len, pattern, pattern_len, t, line_count, matches, 1, op, match_line);
 
             search_len -= line_end - p + 1;
             p = line_end + 1;
-            /* search_len -= line_len; */
-            /* p += line_len + 1; */
         }
+
+        last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count);
 
         if (read_len < N) {
             break;
         }
 
-        buf_offset = 0;
+        size_t rest = read_sum - org_search_len - 1;
 
         last_line_end++;
-        size_t rest = read_sum - org_search_len;
-        char *new_buf;
-        if (n < N + rest) {
-            n += N;
-            new_buf = (char *)calloc((n + pagesize), sizeof(char));
-            memcpy(new_buf, last_line_end, rest - 1);
-            free(buf);
-        } else {
+        char *new_buf = grow_buf_if_shortage(&n, rest, 0, last_line_end, buf);
+        if (new_buf == last_line_end) {
             new_buf = buf;
-            memmove(new_buf, last_line_end, rest - 1);
+            memmove(new_buf, last_line_end, rest);
         }
-        buf = last_new_line_pos = new_buf;
-        buf_offset = rest - 1;
-        read_sum = rest - 1;
-        /* printf("=========== new_buf =================\n%s\n", buf); */
-        /* printf("--- rest ---: %ld, %ld\n", read_sum, n); */
+        buf = last_new_line_scan_pos = new_buf;
+
+        buf_offset = rest;
+        read_sum = rest;
     }
 
     free(buf);
-    return match_count_sum;
+    return match_count;
 }
 
 /**
@@ -369,7 +509,7 @@ int ssabs_(const unsigned char *buf,
 /**
  * Search the pattern as a regular expression.
  */
-int regex(const unsigned char *buf,
+int regex_(const unsigned char *buf,
           int read_len,
           int line_no_offset,
           const char *pattern,
@@ -482,7 +622,7 @@ int search_(int fd, const char *pattern, const hw_option *op, enum file_type t, 
         int match_count;
         if (op->use_regex) {
             // Using a regular expression.
-            match_count = regex(
+            match_count = regex_(
                 (unsigned char *)buf,
                 read_len,
                 line_no_offset,

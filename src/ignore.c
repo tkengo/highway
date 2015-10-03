@@ -27,6 +27,10 @@ ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ign
         node->is_dir = true;
         ignore[len - 1] = '\0';
     }
+    if (strlen(ignore) == 0) {
+        return NULL;
+    }
+
     node->is_no_dir = index(ignore, '/') == NULL;
 
     if (node->is_root) {
@@ -63,7 +67,6 @@ ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ign
 ignore_list *create_ignore_list_from_gitignore(const char *path)
 {
     char buf[1024];
-    sprintf(buf, "%s/%s", path, ".gitignore");
 
     FILE *fp = fopen(buf, "r");
     if (!fp) {
@@ -80,7 +83,7 @@ ignore_list *create_ignore_list_from_gitignore(const char *path)
     int count = 0;
     while (fgets(buf, 1024, fp) != NULL) {
         trim(buf);
-        if (buf[0] == '#') {
+        if (buf[0] == '#' || strlen(buf) == 0) {
             continue;
         }
         add_ignore_list(list, path, buf);
@@ -108,6 +111,7 @@ ignore_list *create_ignore_list_from_list(const char *path, ignore_list *list)
         if (!node->is_root) {
             ignore_list_node *new_node = (ignore_list_node *)malloc(sizeof(ignore_list_node));
             *new_node = *node;
+            new_node->next = NULL;
             new_list->last->next = new_node;
             new_list->last = new_node;
         }
