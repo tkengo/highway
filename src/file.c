@@ -146,5 +146,9 @@ bool is_directory(const struct dirent *entry)
 
 bool is_search_target(const struct dirent *entry)
 {
-    return entry->d_type == DT_REG;
+    if (op.follow_link) {
+        return entry->d_type == DT_REG || entry->d_type == DT_LNK;
+    } else {
+        return entry->d_type == DT_REG;
+    }
 }

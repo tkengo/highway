@@ -64,7 +64,7 @@ ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ign
  * Create ignore list from the .gitignore file in the specified path. Return NULL if there is no
  * the .gitignore file.
  */
-ignore_list *create_ignore_list_from_gitignore(const char *path)
+ignore_list *create_ignore_list_from_gitignore(const char *base, const char *path)
 {
     FILE *fp = fopen(path, "r");
     if (!fp) {
@@ -85,7 +85,7 @@ ignore_list *create_ignore_list_from_gitignore(const char *path)
         if (buf[0] == '#' || strlen(buf) == 0) {
             continue;
         }
-        add_ignore_list(list, path, buf);
+        add_ignore_list(list, base, buf);
         count++;
     }
     fclose(fp);
@@ -98,9 +98,9 @@ ignore_list *create_ignore_list_from_gitignore(const char *path)
     return list;
 }
 
-ignore_list *create_ignore_list_from_list(const char *path, ignore_list *list)
+ignore_list *create_ignore_list_from_list(const char *base, const char *path, ignore_list *list)
 {
-    ignore_list *new_list = create_ignore_list_from_gitignore(path);
+    ignore_list *new_list = create_ignore_list_from_gitignore(base, path);
     if (new_list == NULL) {
         return list;
     }

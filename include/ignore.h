@@ -21,8 +21,8 @@ typedef struct _ignore_list {
     ignore_list_node *acceptable_last;
 } ignore_list;
 
-ignore_list *create_ignore_list_from_gitignore(const char *path);
-ignore_list *create_ignore_list_from_list(const char *path, ignore_list *list);
+ignore_list *create_ignore_list_from_gitignore(const char *base, const char *path);
+ignore_list *create_ignore_list_from_list(const char *base, const char *path, ignore_list *list);
 bool is_ignore(ignore_list *list, const char *filename, const struct dirent *entry);
 void free_ignore_list(ignore_list *list);
 

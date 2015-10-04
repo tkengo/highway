@@ -39,10 +39,7 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
  * Find search target files recursively under the specified directories, and add filenames to the
  * queue used by search worker.
  */
-bool find_target_files(file_queue *queue,
-                       const char *path,
-                       ignore_list *ignores,
-                       const hw_option *op)
+bool find_target_files(file_queue *queue, const char *path, ignore_list *ignores)
 {
     char buf[1024];
 
@@ -60,17 +57,17 @@ bool find_target_files(file_queue *queue,
     }
 
     bool need_free = false;
-    if (!op->all_files) {
+    if (!op.all_files) {
         sprintf(buf, "%s/%s", path, ".gitignore");
         if (access(buf, F_OK) == 0) {
             // Create search ignore list from the .gitignore file. New list is created if there are
             // not ignore file upper directories, otherwise the list will be inherited.
             if (ignores == NULL) {
-                ignores = create_ignore_list_from_gitignore(buf);
+                ignores = create_ignore_list_from_gitignore(path, buf);
                 need_free = true;
             } else {
                 ignore_list *old_ignores = ignores;
-                ignores = create_ignore_list_from_list(buf, ignores);
+                ignores = create_ignore_list_from_list(path, buf, ignores);
                 need_free = old_ignores != ignores;
             }
         }
@@ -87,18 +84,18 @@ bool find_target_files(file_queue *queue,
 
         // Check whether if the file is ignored by gitignore. If it is ignored, skip finding.
         sprintf(buf, "%s/%s", path, entry->d_name);
-        if (!op->all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
+        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
             continue;
         }
 
         if (is_directory(entry)) {
-            find_target_files(queue, buf + offset, ignores, op);
+            find_target_files(queue, buf + offset, ignores);
         } else if (is_search_target(entry)) {
             enqueue_file_exclusively(queue, buf + offset);
         }
     }
 
-    if (!op->all_files && ignores != NULL && need_free) {
+    if (!op.all_files && ignores != NULL && need_free) {
         free_ignore_list(ignores);
     }
 
@@ -106,26 +103,25 @@ bool find_target_files(file_queue *queue,
     return true;
 }
 
-int process_by_terminal(hw_option *op)
+int process_by_terminal()
 {
     file_queue *queue = create_file_queue();
-    worker_params params = { queue, op };
-    pthread_t th[op->worker], pth;
-    for (int i = 0; i < op->worker; i++) {
+    worker_params params = { queue, &op };
+    pthread_t th[op.worker], pth;
+    for (int i = 0; i < op.worker; i++) {
         pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
     }
     pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
-    log_d("%d threads was launched for searching.", op->worker);
+    log_d("%d threads was launched for searching.", op.worker);
 
-    ignore_list *ignores = create_ignore_list_from_gitignore(".");
-    for (int i = 0; i < op->paths_count; i++) {
-        find_target_files(queue, op->root_paths[i], ignores, op);
+    for (int i = 0; i < op.paths_count; i++) {
+        find_target_files(queue, op.root_paths[i], NULL);
     }
     complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);
     pthread_cond_broadcast(&print_cond);
 
-    for (int i = 0; i < op->worker; i++) {
+    for (int i = 0; i < op.worker; i++) {
         pthread_join(th[i], NULL);
     }
     pthread_join(pth, NULL);
@@ -134,14 +130,14 @@ int process_by_terminal(hw_option *op)
     return 0;
 }
 
-int process_by_redirection(hw_option *op)
+int process_by_redirection()
 {
     file_queue *queue = create_file_queue();
     enqueue_file(queue, "dummy");
     complete_finding_file = true;
 
     // Searching.
-    int match_line_count = search_stream(op->pattern, op);
+    int match_line_count = search_stream(op.pattern, &op);
 
     return 0;
 }
@@ -152,7 +148,6 @@ int process_by_redirection(hw_option *op)
 int main(int argc, char **argv)
 {
     int return_code = 0;
-    hw_option op;
 
     if (!init_mutex()) {
         return 1;
@@ -166,9 +161,9 @@ int main(int argc, char **argv)
     }
 
     if (stdin_redirect_from()) {
-        return_code = process_by_redirection(&op);
+        return_code = process_by_redirection();
     } else {
-        return_code = process_by_terminal(&op);
+        return_code = process_by_terminal();
     }
 
     destroy_mutex();

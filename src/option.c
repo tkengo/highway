@@ -9,6 +9,8 @@
 #include "util.h"
 #include "help.h"
 
+hw_option op;
+
 void init_option(int argc, char **argv, hw_option *op)
 {
     bool help = false;
@@ -16,6 +18,7 @@ void init_option(int argc, char **argv, hw_option *op)
 
     static struct option longopts[] = {
         { "all-files",         no_argument,       NULL,  'a' },
+        { "follow-link",       no_argument,       NULL,  'f' },
         { "help",              no_argument,       NULL,  'h' },
         { "ignore-case",       no_argument,       NULL,  'i' },
         { "file-with-matches", no_argument,       NULL,  'l' },
@@ -34,10 +37,11 @@ void init_option(int argc, char **argv, hw_option *op)
     op->all_files         = false;
     op->no_omit           = false;
     op->ignore_case       = false;
+    op->follow_link       = false;
 
     int ch;
     bool word_regex = false;
-    while ((ch = getopt_long(argc, argv, "aehilw", longopts, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "aefhilw", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -59,6 +63,10 @@ void init_option(int argc, char **argv, hw_option *op)
 
             case 'e': /* Use regular expression */
                 op->use_regex = true;
+                break;
+
+            case 'f': /* Following symbolic link */
+                op->follow_link = true;
                 break;
 
             case 'h': /* Show help */

@@ -15,7 +15,10 @@ typedef struct _hw_option {
     bool all_files;
     bool no_omit;
     bool ignore_case;
+    bool follow_link;
 } hw_option;
+
+extern hw_option op;
 
 void init_option(int argc, char **argv, hw_option *op);
 void free_option(hw_option *op);
