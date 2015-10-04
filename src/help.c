@@ -19,9 +19,11 @@ void usage()
     u("OPTIONS List:");
     u("  -a, --all-files          Search all files.");
     u("  -e                       Parse PATTERN as a regular expression.");
+    u("  -i, --ignore-case        Match case insensitively.");
     u("  -l, --file-with-matches  Only print filenames that contain matches.");
     u("      --no-omit            Show all matches even if too many matches was found.");
     u("                           You don't have to use this option usually.");
+    u("  -w, --word-regexp        Only match whole words.");
     u("");
     u("  -h, --help               Show options help and some concept guides.");
 }
