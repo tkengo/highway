@@ -66,9 +66,7 @@ ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ign
  */
 ignore_list *create_ignore_list_from_gitignore(const char *path)
 {
-    char buf[1024];
-
-    FILE *fp = fopen(buf, "r");
+    FILE *fp = fopen(path, "r");
     if (!fp) {
         fclose(fp);
         return NULL;
@@ -80,6 +78,7 @@ ignore_list *create_ignore_list_from_gitignore(const char *path)
     list->acceptable_first = NULL;
     list->acceptable_last  = NULL;
 
+    char buf[1024];
     int count = 0;
     while (fgets(buf, 1024, fp) != NULL) {
         trim(buf);

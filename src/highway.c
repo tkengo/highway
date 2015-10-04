@@ -66,11 +66,11 @@ bool find_target_files(file_queue *queue,
             // Create search ignore list from the .gitignore file. New list is created if there are
             // not ignore file upper directories, otherwise the list will be inherited.
             if (ignores == NULL) {
-                ignores = create_ignore_list_from_gitignore(path);
+                ignores = create_ignore_list_from_gitignore(buf);
                 need_free = true;
             } else {
                 ignore_list *old_ignores = ignores;
-                ignores = create_ignore_list_from_list(path, ignores);
+                ignores = create_ignore_list_from_list(buf, ignores);
                 need_free = old_ignores != ignores;
             }
         }
@@ -117,13 +117,9 @@ int process_by_terminal(hw_option *op)
     pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
     log_d("%d threads was launched for searching.", op->worker);
 
-    ignore_list *ignores = NULL;
+    ignore_list *ignores = create_ignore_list_from_gitignore(".");
     for (int i = 0; i < op->paths_count; i++) {
-        char *path = op->root_paths[i];
-        if (ignores == NULL && strcmp(path, ".") != 0) {
-            ignores = create_ignore_list_from_gitignore(".");
-        }
-        find_target_files(queue, path, ignores, op);
+        find_target_files(queue, op->root_paths[i], ignores, op);
     }
     complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);
