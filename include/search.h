@@ -20,8 +20,8 @@ typedef struct _match {
 #include "option.h"
 
 void generate_bad_character_table(const char *pattern, enum file_type t);
-int search_(int fd, const char *pattern, const hw_option *op, enum file_type t, matched_line_queue *match_lines, int *sum_of_actual_match_count);
-int search(int fd, const char *pattern, enum file_type t, const hw_option *op, matched_line_queue *match_line);
-int search_stream(const char *pattern, const hw_option *op);
+int search_(int fd, const char *pattern, enum file_type t, matched_line_queue *match_lines, int *sum_of_actual_match_count);
+int search(int fd, const char *pattern, enum file_type t, matched_line_queue *match_line);
+int search_stream(const char *pattern);
 
 #endif // _HW_TABLE_H_

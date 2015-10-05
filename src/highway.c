@@ -116,7 +116,7 @@ bool find_target_files(file_queue *queue, const char *path, ignore_list *ignores
 int process_by_terminal()
 {
     file_queue *queue = create_file_queue();
-    worker_params params = { queue, &op };
+    worker_params params = { queue };
     pthread_t th[op.worker], pth;
     for (int i = 0; i < op.worker; i++) {
         pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
@@ -143,7 +143,7 @@ int process_by_terminal()
 int process_by_redirection()
 {
     matched_line_queue *match_line = create_matched_line_queue();
-    int match_count = search(STDIN_FILENO, op.pattern, FILE_TYPE_UTF8, &op, match_line);
+    int match_count = search(STDIN_FILENO, op.pattern, FILE_TYPE_UTF8, match_line);
 
     if (match_count > 0) {
         char *filename = "stream";
@@ -152,9 +152,9 @@ int process_by_redirection()
         dummy.match_lines = match_line;
 
         if (IS_STDOUT_REDIRECT) {
-            print_redirection(filename, &dummy, &op);
+            print_redirection(filename, &dummy);
         } else {
-            print_to_terminal(filename, &dummy, &op);
+            print_to_terminal(filename, &dummy);
         }
     }
 

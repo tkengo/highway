@@ -48,13 +48,13 @@ void destroy_mutex()
     pthread_cond_destroy(&print_cond);
 }
 
-void print_to_terminal(const char *filename, file_queue_node *current, const hw_option *op)
+void print_to_terminal(const char *filename, file_queue_node *current)
 {
     matched_line_queue_node *match_line;
     printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
 
     // If `file_with_matches` option is available, match results don't print on console.
-    if (!op->file_with_matches) {
+    if (!op.file_with_matches) {
         while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
             // Print colorized line number.
             printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
@@ -78,11 +78,11 @@ void print_to_terminal(const char *filename, file_queue_node *current, const hw_
     }
 }
 
-void print_redirection(const char *filename, file_queue_node *current, const hw_option *op)
+void print_redirection(const char *filename, file_queue_node *current)
 {
     matched_line_queue_node *match_line;
 
-    if (op->file_with_matches) {
+    if (op.file_with_matches) {
         // If `file_with_matches` option is available, we print only filenames.
         printf("%s\n", filename);
     } else {
@@ -143,9 +143,9 @@ void *print_worker(void *arg)
             }
 
             if (IS_STDOUT_REDIRECT) {
-                print_redirection(filename, current, params->op);
+                print_redirection(filename, current);
             } else {
-                print_to_terminal(filename, current, params->op);
+                print_to_terminal(filename, current);
             }
 
             if (current->omit_matches) {
@@ -192,16 +192,16 @@ void *search_worker(void *arg)
         // the software in order to search "source code", so searching binary files is not good.
         int fd = open(current->filename, O_RDONLY);
         if (fd != -1 && (t = detect_type_type(fd)) != FILE_TYPE_BINARY) {
-            char *pattern = params->op->pattern;
+            char *pattern = op.pattern;
 
             // Convert the pattern to appropriate encoding if an encoding of the target file is
             // not UTF-8.
             char out[out_len + 1];
             if (t == FILE_TYPE_EUC_JP || t == FILE_TYPE_SHIFT_JIS) {
                 if (t == FILE_TYPE_EUC_JP) {
-                    to_euc(params->op->pattern, params->op->pattern_len, out, out_len);
+                    to_euc(op.pattern, op.pattern_len, out, out_len);
                 } else if (t == FILE_TYPE_SHIFT_JIS) {
-                    to_sjis(params->op->pattern, params->op->pattern_len, out, out_len);
+                    to_sjis(op.pattern, op.pattern_len, out, out_len);
                 }
                 pattern = out;
             }
@@ -209,7 +209,7 @@ void *search_worker(void *arg)
             // Searching.
             int actual_match_count = 0;
             matched_line_queue *match_line = create_matched_line_queue();
-            int match_count = search(fd, pattern, t, params->op, match_line);
+            int match_count = search(fd, pattern, t, match_line);
 
             if (match_count > 0) {
                 // Set additional data to the queue data because it will be used on print worker in

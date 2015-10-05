@@ -148,14 +148,13 @@ bool regex(const char *buf,
           size_t search_len,
           const char *pattern,
           enum file_type t,
-          const hw_option *op,
           match *m)
 {
     OnigRegion *region = onig_region_new();
 
     // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
     // but this wrapper method is implemented in thread safety.
-    regex_t *reg = onig_new_wrap(pattern, t, op->ignore_case);
+    regex_t *reg = onig_new_wrap(pattern, t, op.ignore_case);
     if (reg == NULL) {
         return false;
     }
@@ -180,11 +179,10 @@ int search_by(const char *buf,
               const char *pattern,
               int pattern_len,
               enum file_type t,
-              const hw_option *op,
               match *m)
 {
-    if (op->use_regex) {
-        return regex(buf, search_len, pattern, t, op, m);
+    if (op.use_regex) {
+        return regex(buf, search_len, pattern, t, m);
     } else {
         return fjs(buf, search_len, pattern, pattern_len, t, m);
     }
@@ -198,13 +196,12 @@ int format_line(const char *line,
                 int line_no,
                 match *matches,
                 int match_start,
-                const hw_option *op,
                 matched_line_queue *match_line)
 {
     int pos = 0, match_count = match_start;
     int offset = matches[match_start - 1].end;
 
-    while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, op, &matches[match_count])) {
+    while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, &matches[match_count])) {
         matches[match_count].start += offset;
         matches[match_count].end   += offset;
         offset = matches[match_count].end;
@@ -250,21 +247,20 @@ int format_line(const char *line,
 int search(int fd,
            const char *pattern,
            enum file_type t,
-           const hw_option *op,
            matched_line_queue *match_line)
 {
     size_t line_count = 0;
     size_t read_sum = 0;
     size_t n = N;
     size_t read_len;
-    int pattern_len = op->pattern_len;
+    int pattern_len = op.pattern_len;
     int buf_offset = 0;
     int match_count = 0;
     char *buf = (char *)calloc(n, sizeof(char));
     char *last_new_line_scan_pos = buf;
     match m;
 
-    if (!op->use_regex) {
+    if (!op.use_regex) {
         prepare_fjs(pattern, t);
     }
 
@@ -282,7 +278,7 @@ int search(int fd,
         size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
         size_t org_search_len = search_len;
         char *p = buf;
-        while (search_by(p, search_len, pattern, pattern_len, t, op, &m)) {
+        while (search_by(p, search_len, pattern, pattern_len, t, &m)) {
             // Searching head/end of the line, then calculate line length using them.
             int plen = m.end - m.start;
             char *line_head = reverse_char(p, '\n', m.start);
@@ -296,7 +292,7 @@ int search(int fd,
             match matches[MIN(line_len / plen, MAX_MATCH_COUNT)];
             matches[0].start = m.start - (line_head - p);
             matches[0].end   = matches[0].start + plen;
-            match_count += format_line(line_head, line_len, pattern, plen, t, line_count, matches, 1, op, match_line);
+            match_count += format_line(line_head, line_len, pattern, plen, t, line_count, matches, 1, match_line);
 
             search_len -= line_end - p + 1;
             p = line_end + 1;
