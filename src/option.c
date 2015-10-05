@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <tcmalloc.h>
 #include "common.h"
 #include "highway.h"
 #include "option.h"
@@ -101,11 +102,11 @@ void init_option(int argc, char **argv, hw_option *op)
 
     char *pattern = argv[optind++];
     if (word_regex) {
-        op->pattern = (char *)malloc(sizeof(char) * (strlen(pattern) + 5));
+        op->pattern = (char *)tc_malloc(sizeof(char) * (strlen(pattern) + 5));
         sprintf(op->pattern, "\\b%s\\b", pattern);
         op->use_regex = true;
     } else {
-        op->pattern = (char *)malloc(sizeof(char) * (strlen(pattern) + 1));
+        op->pattern = (char *)tc_malloc(sizeof(char) * (strlen(pattern) + 1));
         strcpy(op->pattern, pattern);
     }
 

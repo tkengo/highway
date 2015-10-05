@@ -7,8 +7,8 @@ GCC = gcc
 .PHONY: clean
 
 BUILD_DIR = tmp/build/
-INCLUDE = -Iinclude -Ivendor/onigmo
-LIB = -L/usr/local/lib -liconv
+INCLUDE = -Iinclude -Ivendor/onigmo -I/usr/local/Cellar/gperftools/2.4/include/gperftools
+LIB = -L/usr/local/lib -liconv -ltcmalloc
 CFLAGS = -O3
 SOURCES = \
 		  highway.c \

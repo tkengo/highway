@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
+#include <tcmalloc.h>
 #include "queue.h"
 
 file_queue *create_file_queue()
 {
-    file_queue *queue = (file_queue *)malloc(sizeof(file_queue));
+    file_queue *queue = (file_queue *)tc_malloc(sizeof(file_queue));
     queue->first   = NULL;
     queue->last    = NULL;
     queue->current_for_search = NULL;
@@ -15,7 +16,7 @@ file_queue *create_file_queue()
 
 file_queue_node *enqueue_file(file_queue *queue, const char *filename)
 {
-    file_queue_node *node = (file_queue_node *)malloc(sizeof(file_queue_node));
+    file_queue_node *node = (file_queue_node *)tc_malloc(sizeof(file_queue_node));
     node->id          = queue->total++;
     node->next        = NULL;
     node->match_lines = NULL;
@@ -79,7 +80,7 @@ void free_file_queue(file_queue *queue)
 
 matched_line_queue *create_matched_line_queue()
 {
-    matched_line_queue *queue = (matched_line_queue *)malloc(sizeof(matched_line_queue));
+    matched_line_queue *queue = (matched_line_queue *)tc_malloc(sizeof(matched_line_queue));
     queue->first = NULL;
     queue->last  = NULL;
     return queue;

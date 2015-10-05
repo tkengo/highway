@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <tcmalloc.h>
 #include "search.h"
 #include "regex.h"
 #include "file.h"
@@ -132,7 +133,7 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
     char *new_buf;
     if (*cur_buf_size < need_size + buf_offset + N) {
         *cur_buf_size += N;
-        new_buf = (char *)calloc(*cur_buf_size, sizeof(char));
+        new_buf = (char *)tc_calloc(*cur_buf_size, sizeof(char));
         memcpy(new_buf, copy_buf, need_size);
         free(current_buf);
     } else {
@@ -198,7 +199,7 @@ int format_line(const char *line,
     int n = 100;
     int pos = 0, match_count = 1;
     int offset = first_match->end;
-    match *matches = (match *)malloc(sizeof(match) * n);
+    match *matches = (match *)tc_malloc(sizeof(match) * n);
     matches[0] = *first_match;
 
     while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, &matches[match_count])) {
@@ -215,9 +216,9 @@ int format_line(const char *line,
     }
 
     int buffer_len = line_len + MATCH_WORD_ESCAPE_LEN * match_count;
-    matched_line_queue_node *node = (matched_line_queue_node *)malloc(sizeof(matched_line_queue_node));
+    matched_line_queue_node *node = (matched_line_queue_node *)tc_malloc(sizeof(matched_line_queue_node));
     node->line_no = line_no;
-    node->line = (char *)calloc(buffer_len, sizeof(char));
+    node->line = (char *)tc_calloc(buffer_len, sizeof(char));
 
     const char *s = line;
     int old_end = 0;
@@ -261,7 +262,7 @@ int search(int fd,
     int pattern_len = op.pattern_len;
     int buf_offset = 0;
     int match_count = 0;
-    char *buf = (char *)calloc(n, sizeof(char));
+    char *buf = (char *)tc_calloc(n, sizeof(char));
     char *last_new_line_scan_pos = buf;
     match m;
 
@@ -286,7 +287,7 @@ int search(int fd,
 
         // Search the first pattern in the buffer.
         while (search_by(p, search_len, pattern, pattern_len, t, &m)) {
-            // Search head/end of the line, then calculate line length using them.
+            // Search head/end of the line, then calculate line length by using them.
             int plen = m.end - m.start;
             char *line_head = reverse_char(p, '\n', m.start);
             char *line_end  = memchr(p + m.start + plen, '\n', search_len - m.start - plen + 1);

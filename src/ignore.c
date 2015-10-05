@@ -3,6 +3,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <fnmatch.h>
+#include <tcmalloc.h>
 #include "common.h"
 #include "ignore.h"
 #include "file.h"
@@ -15,7 +16,7 @@ ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ign
         ignore++;
     }
 
-    ignore_list_node *node = (ignore_list_node *)malloc(sizeof(ignore_list_node));
+    ignore_list_node *node = (ignore_list_node *)tc_malloc(sizeof(ignore_list_node));
 
     node->next = NULL;
 
@@ -72,7 +73,7 @@ ignore_list *create_ignore_list_from_gitignore(const char *base, const char *pat
         return NULL;
     }
 
-    ignore_list *list = (ignore_list *)malloc(sizeof(ignore_list));
+    ignore_list *list = (ignore_list *)tc_malloc(sizeof(ignore_list));
     list->first = NULL;
     list->last  = NULL;
     list->acceptable_first = NULL;
@@ -108,11 +109,16 @@ ignore_list *create_ignore_list_from_list(const char *base, const char *path, ig
     ignore_list_node *node = list->first;
     while (node) {
         if (!node->is_root) {
-            ignore_list_node *new_node = (ignore_list_node *)malloc(sizeof(ignore_list_node));
+            ignore_list_node *new_node = (ignore_list_node *)tc_malloc(sizeof(ignore_list_node));
             *new_node = *node;
             new_node->next = NULL;
-            new_list->last->next = new_node;
-            new_list->last = new_node;
+            if (new_list->last) {
+                new_list->last->next = new_node;
+                new_list->last = new_node;
+            } else {
+                list->first = new_node;
+                list->last  = new_node;
+            }
         }
         node = node->next;
     }
