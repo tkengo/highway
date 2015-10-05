@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (stdin_redirect_from()) {
+    if (IS_STDIN_REDIRECT) {
         return_code = process_by_redirection();
     } else {
         return_code = process_by_terminal();

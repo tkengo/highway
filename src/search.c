@@ -163,11 +163,11 @@ int format(const char *buf, int read_len, const match *matches, int match_count,
             // Concatenate prefix and pattern string with escape sequence for coloring. But
             // same as line no, if stdout is redirected, then no color.
             strncat(node->line, buf + print_start, prefix_length);
-            if (!stdout_redirect_to()) {
+            if (IS_STDOUT_REDIRECT) {
                 strncat(node->line, MATCH_WORD_COLOR, MATCH_WORD_COLOR_LEN);
             }
             strncat(node->line, buf + print_start + prefix_length, pattern_len);
-            if (!stdout_redirect_to()) {
+            if (IS_STDOUT_REDIRECT) {
                 strncat(node->line, RESET_COLOR, RESET_COLOR_LEN);
             }
 

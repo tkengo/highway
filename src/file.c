@@ -13,7 +13,7 @@
  */
 enum file_type detect_type_type(int fd)
 {
-    if (stdin_redirect_from()) {
+    if (IS_STDIN_REDIRECT) {
         return FILE_TYPE_UTF8;
     }
 

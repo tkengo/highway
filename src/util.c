@@ -31,16 +31,6 @@ void init_iconv()
     utf8_sjis_ic = iconv_open("UTF-8",     "SHIFT_JIS");
 }
 
-bool stdin_redirect_from()
-{
-    return !isatty(STDIN_FILENO);
-}
-
-bool stdout_redirect_to()
-{
-    return !isatty(STDOUT_FILENO);
-}
-
 void close_iconv()
 {
     iconv_close(euc_ic);

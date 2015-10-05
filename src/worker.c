@@ -144,7 +144,7 @@ void *print_worker(void *arg)
                 filename += 2;
             }
 
-            if (stdout_redirect_to()) {
+            if (IS_STDOUT_REDIRECT) {
                 print_redirection(filename, current, params->op);
             } else {
                 print_to_terminal(filename, current, params->op);
