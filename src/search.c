@@ -30,10 +30,25 @@ char *reverse_char(const char *buf, char c, size_t n)
     return p[n] == uc ? (char *)p : NULL;
 }
 
-void makebetap(const char *pattern, int m)
+void prepare_fjs(const char *pattern, enum file_type t)
 {
+    if (tbl_created[t]) {
+        return;
+    }
+
+    // Generate bad-character table.
+    int i, j, m = strlen(pattern);
     const unsigned char *p = (unsigned char *)pattern;
-    int i = 0, j = betap[0] = -1;
+    for (i = 0; i < TABLE_SIZE; ++i) {
+        tbl[t][i] = m + 1;
+    }
+    for (i = 0; i < m; ++i) {
+        tbl[t][p[i]] = m - i;
+    }
+
+    // Generate betap.
+    i = 0;
+    j = betap[0] = -1;
     while (i < m) {
         while (j > -1 && p[i] != p[j]) {
             j = betap[j];
@@ -44,24 +59,7 @@ void makebetap(const char *pattern, int m)
             betap[i] = j;
         }
     }
-}
 
-void prepare_fjs(const char *pattern, enum file_type t)
-{
-    if (tbl_created[t]) {
-        return;
-    }
-
-    int i, m = strlen(pattern);
-    const unsigned char *p = (unsigned char *)pattern;
-    for (i = 0; i < TABLE_SIZE; ++i) {
-        tbl[t][i] = m + 1;
-    }
-    for (i = 0; i < m; ++i) {
-        tbl[t][p[i]] = m - i;
-    }
-
-    makebetap(pattern, m);
     tbl_created[t] = true;
 }
 
