@@ -163,11 +163,11 @@ int format(const char *buf, int read_len, const match *matches, int match_count,
             // Concatenate prefix and pattern string with escape sequence for coloring. But
             // same as line no, if stdout is redirected, then no color.
             strncat(node->line, buf + print_start, prefix_length);
-            if (IS_STDOUT_REDIRECT) {
+            if (!IS_STDOUT_REDIRECT) {
                 strncat(node->line, MATCH_WORD_COLOR, MATCH_WORD_COLOR_LEN);
             }
             strncat(node->line, buf + print_start + prefix_length, pattern_len);
-            if (IS_STDOUT_REDIRECT) {
+            if (!IS_STDOUT_REDIRECT) {
                 strncat(node->line, RESET_COLOR, RESET_COLOR_LEN);
             }
 
@@ -310,15 +310,6 @@ int format_line(const char *line,
     int offset = matches[match_start - 1].end;
 
     while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, op, &matches[match_count])) {
-        /* pos += offset; */
-        /*  */
-        /* int end = pos + pattern_len; */
-        /* matches[match_count].start = pos; */
-        /* matches[match_count].end   = end; */
-        /* match_count++; */
-        /*  */
-        /* offset = end; */
-
         matches[match_count].start += offset;
         matches[match_count].end   += offset;
         offset = matches[match_count].end;
@@ -338,9 +329,13 @@ int format_line(const char *line,
         int plen = matches[i].end - matches[i].start;
 
         strncat(node->line, s, prefix_len);
-        strcat (node->line, MATCH_WORD_COLOR);
+        if (!IS_STDOUT_REDIRECT) {
+            strcat (node->line, MATCH_WORD_COLOR);
+        }
         strncat(node->line, s + prefix_len, plen);
-        strcat (node->line, RESET_COLOR);
+        if (!IS_STDOUT_REDIRECT) {
+            strcat (node->line, RESET_COLOR);
+        }
 
         s += prefix_len + plen;
         old_end = matches[i].end;
