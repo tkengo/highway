@@ -82,8 +82,8 @@ void print_redirection(const char *filename, file_queue_node *current, const hw_
 {
     matched_line_queue_node *match_line;
 
-    // If `file_with_matches` option is available, match results don't print on console.
     if (op->file_with_matches) {
+        // If `file_with_matches` option is available, we print only filenames.
         printf("%s\n", filename);
     } else {
         while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {

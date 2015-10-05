@@ -142,12 +142,21 @@ int process_by_terminal()
 
 int process_by_redirection()
 {
-    file_queue *queue = create_file_queue();
-    enqueue_file(queue, "dummy");
-    complete_finding_file = true;
+    matched_line_queue *match_line = create_matched_line_queue();
+    int match_count = search(STDIN_FILENO, op.pattern, FILE_TYPE_UTF8, &op, match_line);
 
-    // Searching.
-    int match_line_count = search_stream(op.pattern, &op);
+    if (match_count > 0) {
+        char *filename = "stream";
+        file_queue_node dummy;
+        dummy.t           = FILE_TYPE_UTF8;
+        dummy.match_lines = match_line;
+
+        if (IS_STDOUT_REDIRECT) {
+            print_redirection(filename, &dummy, &op);
+        } else {
+            print_to_terminal(filename, &dummy, &op);
+        }
+    }
 
     return 0;
 }
