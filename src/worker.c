@@ -193,7 +193,7 @@ void *search_worker(void *arg)
         // Check file type of the target file, then if it is a binary, we skip it because the hw is
         // the software in order to search "source code", so searching binary files is not good.
         int fd = open(current->filename, O_RDONLY);
-        if ((t = detect_type_type(fd)) != FILE_TYPE_BINARY) {
+        if (fd != -1 && (t = detect_type_type(fd)) != FILE_TYPE_BINARY) {
             char *pattern = params->op->pattern;
 
             // Convert the pattern to appropriate encoding if an encoding of the target file is
@@ -211,7 +211,6 @@ void *search_worker(void *arg)
             // Searching.
             int actual_match_count = 0;
             matched_line_queue *match_line = create_matched_line_queue();
-            /* int match_count = search(fd, pattern, params->op, t, match_line, &actual_match_count); */
             int match_count = search(fd, pattern, t, params->op, match_line);
 
             if (match_count > 0) {

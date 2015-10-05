@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "highway.h"
 #include "option.h"
 #include "file.h"
@@ -86,6 +87,15 @@ bool find_target_files(file_queue *queue, const char *path, ignore_list *ignores
         sprintf(buf, "%s/%s", path, entry->d_name);
         if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
             continue;
+        }
+
+        // Check if symlink exists. Skip this entry if not exist.
+        if (op.follow_link && entry->d_type == DT_LNK) {
+            char link[1024];
+            readlink(buf, link, 1024);
+            if (access(link, F_OK) != 0) {
+                continue;
+            }
         }
 
         if (is_directory(entry)) {
