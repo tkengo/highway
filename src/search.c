@@ -194,14 +194,21 @@ int format_line(const char *line,
                 int pattern_len,
                 enum file_type t,
                 int line_no,
-                match *matches,
-                int match_start,
+                match *first_match,
                 matched_line_queue *match_line)
 {
-    int pos = 0, match_count = match_start;
-    int offset = matches[match_start - 1].end;
+    int n = 100;
+    int pos = 0, match_count = 1;
+    int offset = first_match->end;
+    match *matches = (match *)malloc(sizeof(match) * n);
+    matches[0] = *first_match;
 
     while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, &matches[match_count])) {
+        if (n <= match_count) {
+            n *= 2;
+            matches = (match *)realloc(matches, sizeof(match) * n);
+        }
+
         matches[match_count].start += offset;
         matches[match_count].end   += offset;
         offset = matches[match_count].end;
@@ -278,8 +285,10 @@ int search(int fd,
         size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
         size_t org_search_len = search_len;
         char *p = buf;
+
+        // Search the first pattern in the buffer.
         while (search_by(p, search_len, pattern, pattern_len, t, &m)) {
-            // Searching head/end of the line, then calculate line length using them.
+            // Search head/end of the line, then calculate line length using them.
             int plen = m.end - m.start;
             char *line_head = reverse_char(p, '\n', m.start);
             char *line_end  = memchr(p + m.start + plen, '\n', search_len - m.start - plen + 1);
@@ -289,10 +298,9 @@ int search(int fd,
             // Count lines.
             last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count);
 
-            match matches[MIN(line_len / plen, MAX_MATCH_COUNT)];
-            matches[0].start = m.start - (line_head - p);
-            matches[0].end   = matches[0].start + plen;
-            match_count += format_line(line_head, line_len, pattern, plen, t, line_count, matches, 1, match_line);
+            m.start -= line_head - p;
+            m.end    = m.start + plen;
+            match_count += format_line(line_head, line_len, pattern, plen, t, line_count, &m, match_line);
 
             search_len -= line_end - p + 1;
             p = line_end + 1;
