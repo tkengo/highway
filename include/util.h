@@ -2,6 +2,8 @@
 #define _HW_UTIL_H_
 
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)
+#define MAX(a,b) ((a) > (b)) ? (a) : (b)
+
 #define IS_STDIN_REDIRECT (!isatty(STDIN_FILENO))
 #define IS_STDOUT_REDIRECT (!isatty(STDOUT_FILENO))
 

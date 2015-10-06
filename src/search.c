@@ -11,6 +11,9 @@
 #include "string.h"
 
 #define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
+#define APPEND_DOT(t) strcat ((t), OMIT_COLOR);\
+                      strcat ((t), "....");\
+                      strcat ((t), RESET_COLOR)
 
 static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
@@ -196,7 +199,7 @@ int format_line(const char *line,
                 match *first_match,
                 matched_line_queue *match_line)
 {
-    int n = 100;
+    int n = 10;
     int pos = 0, match_count = 1;
     int offset = first_match->end;
     match *matches = (match *)tc_malloc(sizeof(match) * n);
@@ -215,22 +218,40 @@ int format_line(const char *line,
         match_count++;
     }
 
-    int buffer_len = line_len + MATCH_WORD_ESCAPE_LEN * match_count;
+    int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
     matched_line_queue_node *node = (matched_line_queue_node *)tc_malloc(sizeof(matched_line_queue_node));
     node->line_no = line_no;
     node->line = (char *)tc_calloc(buffer_len, sizeof(char));
 
     const char *s = line;
     int old_end = 0;
+    int sum = 0;
     for (int i = 0; i < match_count; i++) {
         int prefix_len = matches[i].start - old_end;
         int plen = matches[i].end - matches[i].start;
+        sum += prefix_len + plen;
 
-        strncat(node->line, s, prefix_len);
+        if (matches[i].start - old_end > op.omit_threshold) {
+            if (i == 0) {
+                int rest_len = op.omit_threshold - 4;
+                APPEND_DOT(node->line);
+                strncat(node->line, s + prefix_len - rest_len, rest_len);
+            } else {
+                int rest_len = op.omit_threshold / 2 - 2;
+                strncat(node->line, s, rest_len);
+                APPEND_DOT(node->line);
+                strncat(node->line, s + prefix_len - rest_len, rest_len);
+            }
+        } else {
+            strncat(node->line, s, prefix_len);
+        }
+
         if (!IS_STDOUT_REDIRECT) {
             strcat (node->line, MATCH_WORD_COLOR);
         }
+
         strncat(node->line, s + prefix_len, plen);
+
         if (!IS_STDOUT_REDIRECT) {
             strcat (node->line, RESET_COLOR);
         }
@@ -240,7 +261,13 @@ int format_line(const char *line,
     }
 
     int last_end = matches[match_count - 1].end;
-    strncat(node->line, s, line_len - last_end);
+    int suffix_len = line_len - last_end;
+    if (suffix_len > op.omit_threshold) {
+        strncat(node->line, s, op.omit_threshold - 4);
+        APPEND_DOT(node->line);
+    } else {
+        strncat(node->line, s, line_len - last_end);
+    }
     enqueue_matched_line(match_line, node);
 
     return match_count;

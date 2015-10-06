@@ -3,6 +3,8 @@
 #include <string.h>
 #include <getopt.h>
 #include <gperftools/tcmalloc.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include "common.h"
 #include "highway.h"
 #include "option.h"
@@ -30,9 +32,13 @@ void init_option(int argc, char **argv, hw_option *op)
         { 0, 0, 0, 0 }
     };
 
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
     op->worker            = DEFAULT_WORKER;
     op->root_paths[0]     = ".";
     op->paths_count       = 1;
+    op->omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);
     op->file_with_matches = false;
     op->use_regex         = false;
     op->all_files         = false;
