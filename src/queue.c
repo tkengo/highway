@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include <tcmalloc.h>
+#include <gperftools/tcmalloc.h>
 #include "queue.h"
 
 file_queue *create_file_queue()

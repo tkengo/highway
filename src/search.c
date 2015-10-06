@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <tcmalloc.h>
+#include <gperftools/tcmalloc.h>
 #include "search.h"
 #include "regex.h"
 #include "file.h"

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <fnmatch.h>
-#include <tcmalloc.h>
+#include <gperftools/tcmalloc.h>
 #include "common.h"
 #include "ignore.h"
 #include "file.h"

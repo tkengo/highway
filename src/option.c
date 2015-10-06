@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
-#include <tcmalloc.h>
+#include <gperftools/tcmalloc.h>
 #include "common.h"
 #include "highway.h"
 #include "option.h"
