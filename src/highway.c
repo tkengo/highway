@@ -179,6 +179,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    setvbuf(stdout, NULL, _IOFBF, 1024 * 32);
+
     if (IS_STDIN_REDIRECT) {
         return_code = process_by_redirection();
     } else {
