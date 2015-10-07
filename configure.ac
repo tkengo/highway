@@ -15,6 +15,7 @@ AC_PROG_CC
 AC_CHECK_LIB([iconv], [main])
 # FIXME: Replace `main' with a function in `-ltcmalloc':
 AC_CHECK_LIB([tcmalloc], [main])
+CFLAGS="-g -O2"
 
 # Checks for header files.
 AC_FUNC_ALLOCA
