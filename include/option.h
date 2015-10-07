@@ -10,7 +10,6 @@ typedef struct _hw_option {
     char *root_paths[MAX_PATHS_COUNT]; /* path list for searching */
     int paths_count;                   /* path count above list */
     char *pattern;
-    int pattern_len;
     int worker;
     int omit_threshold;
     bool file_with_matches;

@@ -167,6 +167,7 @@ void *search_worker(void *arg)
     enum file_type t;
     worker_params *params = (worker_params *)arg;
     const size_t out_len = 1024;
+    int utf8_pattern_len = strlen(op.pattern);
 
     while (1) {
         // This worker takes out a search target file from the queue. If the queue is empty, worker
@@ -196,20 +197,21 @@ void *search_worker(void *arg)
 
             // Convert the pattern to appropriate encoding if an encoding of the target file is
             // not UTF-8.
-            char out[out_len + 1];
+            char out[out_len + 1], pattern_len = utf8_pattern_len;
             if (t == FILE_TYPE_EUC_JP || t == FILE_TYPE_SHIFT_JIS) {
                 if (t == FILE_TYPE_EUC_JP) {
-                    to_euc(op.pattern, op.pattern_len, out, out_len);
+                    to_euc(op.pattern, utf8_pattern_len, out, out_len);
                 } else if (t == FILE_TYPE_SHIFT_JIS) {
-                    to_sjis(op.pattern, op.pattern_len, out, out_len);
+                    to_sjis(op.pattern, utf8_pattern_len, out, out_len);
                 }
                 pattern = out;
+                pattern_len = strlen(pattern);
             }
 
             // Searching.
             int actual_match_count = 0;
             matched_line_queue *match_line = create_matched_line_queue();
-            int match_count = search(fd, pattern, t, match_line);
+            int match_count = search(fd, pattern, pattern_len, t, match_line);
 
             if (match_count > 0) {
                 // Set additional data to the queue data because it will be used on print worker in

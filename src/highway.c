@@ -143,7 +143,7 @@ int process_by_terminal()
 int process_by_redirection()
 {
     matched_line_queue *match_line = create_matched_line_queue();
-    int match_count = search(STDIN_FILENO, op.pattern, FILE_TYPE_UTF8, match_line);
+    int match_count = search(STDIN_FILENO, op.pattern, strlen(op.pattern), FILE_TYPE_UTF8, match_line);
 
     if (match_count > 0) {
         char *filename = "stream";

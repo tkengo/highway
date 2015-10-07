@@ -10,9 +10,9 @@
 #include "oniguruma.h"
 
 #define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
-#define APPEND_DOT(t) strcat ((t), OMIT_COLOR);\
-                      strcat ((t), "....");\
-                      strcat ((t), RESET_COLOR)
+#define APPEND_DOT(t) strcat((t), OMIT_COLOR);\
+                      strcat((t), "....");\
+                      strcat((t), RESET_COLOR)
 
 static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
@@ -33,7 +33,7 @@ char *reverse_char(const char *buf, char c, size_t n)
     return p[n] == uc ? (char *)p : NULL;
 }
 
-void prepare_fjs(const char *pattern, enum file_type t)
+void prepare_fjs(const char *pattern, int pattern_len, enum file_type t)
 {
     if (tbl_created[t]) {
         return;
@@ -278,6 +278,7 @@ int format_line(const char *line,
  */
 int search(int fd,
            const char *pattern,
+           int pattern_len,
            enum file_type t,
            matched_line_queue *match_line)
 {
@@ -285,7 +286,6 @@ int search(int fd,
     size_t read_sum = 0;
     size_t n = N;
     size_t read_len;
-    int pattern_len = op.pattern_len;
     int buf_offset = 0;
     int match_count = 0;
     char *buf = (char *)tc_calloc(n, sizeof(char));
@@ -293,7 +293,7 @@ int search(int fd,
     match m;
 
     if (!op.use_regex) {
-        prepare_fjs(pattern, t);
+        prepare_fjs(pattern, pattern_len, t);
     }
 
     while ((read_len = read(fd, buf + buf_offset, N)) > 0) {
