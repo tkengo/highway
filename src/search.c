@@ -230,7 +230,7 @@ int format_line(const char *line,
         int plen = matches[i].end - matches[i].start;
         sum += prefix_len + plen;
 
-        if (!IS_STDOUT_REDIRECT && matches[i].start - old_end > op.omit_threshold) {
+        if (!op.stdout_redirect && matches[i].start - old_end > op.omit_threshold) {
             if (i == 0) {
                 int rest_len = op.omit_threshold - 4;
                 APPEND_DOT(node->line);
@@ -245,13 +245,13 @@ int format_line(const char *line,
             strncat(node->line, s, prefix_len);
         }
 
-        if (!IS_STDOUT_REDIRECT) {
+        if (!op.stdout_redirect) {
             strcat(node->line, MATCH_WORD_COLOR);
         }
 
         strncat(node->line, s + prefix_len, plen);
 
-        if (!IS_STDOUT_REDIRECT) {
+        if (!op.stdout_redirect) {
             strcat(node->line, RESET_COLOR);
         }
 

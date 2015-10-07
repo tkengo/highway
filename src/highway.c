@@ -151,7 +151,7 @@ int process_by_redirection()
         dummy.t           = FILE_TYPE_UTF8;
         dummy.match_lines = match_line;
 
-        if (IS_STDOUT_REDIRECT) {
+        if (op.stdout_redirect) {
             print_redirection(filename, &dummy);
         } else {
             print_to_terminal(filename, &dummy);
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 
     setvbuf(stdout, NULL, _IOFBF, 1024 * 32);
 
-    if (IS_STDIN_REDIRECT) {
+    if (op.stdin_redirect) {
         return_code = process_by_redirection();
     } else {
         return_code = process_by_terminal();

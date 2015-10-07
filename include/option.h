@@ -18,6 +18,8 @@ typedef struct _hw_option {
     bool no_omit;
     bool ignore_case;
     bool follow_link;
+    bool stdout_redirect;
+    bool stdin_redirect;
 } hw_option;
 
 extern hw_option op;

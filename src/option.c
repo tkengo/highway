@@ -45,6 +45,8 @@ void init_option(int argc, char **argv, hw_option *op)
     op->no_omit           = false;
     op->ignore_case       = false;
     op->follow_link       = false;
+    op->stdout_redirect   = IS_STDOUT_REDIRECT;
+    op->stdin_redirect    = IS_STDIN_REDIRECT;
 
     int ch;
     bool word_regex = false;

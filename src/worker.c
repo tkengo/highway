@@ -142,7 +142,7 @@ void *print_worker(void *arg)
                 filename += 2;
             }
 
-            if (IS_STDOUT_REDIRECT) {
+            if (op.stdout_redirect) {
                 print_redirection(filename, current);
             } else {
                 print_to_terminal(filename, current);
