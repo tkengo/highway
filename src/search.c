@@ -8,7 +8,6 @@
 #include "color.h"
 #include "util.h"
 #include "oniguruma.h"
-#include "string.h"
 
 #define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
 #define APPEND_DOT(t) strcat ((t), OMIT_COLOR);\
@@ -231,7 +230,7 @@ int format_line(const char *line,
         int plen = matches[i].end - matches[i].start;
         sum += prefix_len + plen;
 
-        if (matches[i].start - old_end > op.omit_threshold) {
+        if (!IS_STDOUT_REDIRECT && matches[i].start - old_end > op.omit_threshold) {
             if (i == 0) {
                 int rest_len = op.omit_threshold - 4;
                 APPEND_DOT(node->line);
@@ -247,13 +246,13 @@ int format_line(const char *line,
         }
 
         if (!IS_STDOUT_REDIRECT) {
-            strcat (node->line, MATCH_WORD_COLOR);
+            strcat(node->line, MATCH_WORD_COLOR);
         }
 
         strncat(node->line, s + prefix_len, plen);
 
         if (!IS_STDOUT_REDIRECT) {
-            strcat (node->line, RESET_COLOR);
+            strcat(node->line, RESET_COLOR);
         }
 
         s += prefix_len + plen;
