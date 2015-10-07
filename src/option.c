@@ -35,7 +35,7 @@ void init_option(int argc, char **argv, hw_option *op)
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-    op->worker            = DEFAULT_WORKER;
+    op->worker            = MAX(DEFAULT_WORKER, sysconf(_SC_NPROCESSORS_ONLN) - 1);
     op->root_paths[0]     = ".";
     op->paths_count       = 1;
     op->omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);

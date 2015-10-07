@@ -122,7 +122,7 @@ int process_by_terminal()
         pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
     }
     pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
-    log_d("%d threads was launched for searching.", op.worker);
+    log_d("Worker num: %d", op.worker);
 
     for (int i = 0; i < op.paths_count; i++) {
         find_target_files(queue, op.root_paths[i], NULL);
