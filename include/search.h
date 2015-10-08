@@ -1,7 +1,7 @@
 #ifndef _HW_TABLE_H_
 #define _HW_TABLE_H_
 
-#define TABLE_SIZE 256
+#define BAD_CHARACTER_TABLE_SIZE 256
 #define N 65536
 #define MAX_MATCH_COUNT 1000
 

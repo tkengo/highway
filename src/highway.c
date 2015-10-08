@@ -42,7 +42,7 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
  */
 bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ignores, int depth)
 {
-    char buf[1024], base[1024];
+    char buf[MAX_PATH_LENGTH], base[MAX_PATH_LENGTH];
 
     // Open the path as a directory. If it is not a directory, check whether if it is a file,
     // and then add the file to the queue if it is true.
@@ -93,8 +93,8 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
 
         // Check if symlink exists. Skip this entry if not exist.
         if (op.follow_link && entry->d_type == DT_LNK) {
-            char link[1024] = { 0 };
-            readlink(buf, link, 1024);
+            char link[MAX_PATH_LENGTH] = { 0 };
+            readlink(buf, link, MAX_PATH_LENGTH);
             if (access(link, F_OK) != 0) {
                 continue;
             }

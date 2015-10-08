@@ -14,7 +14,7 @@
                       strcat((t), "....");\
                       strcat((t), RESET_COLOR)
 
-static char tbl[AVAILABLE_ENCODING_COUNT][TABLE_SIZE];
+static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
 
 static int betap[100 + 1];
@@ -42,7 +42,7 @@ void prepare_fjs(const char *pattern, int pattern_len, enum file_type t)
     // Generate bad-character table.
     int i, j, m = strlen(pattern);
     const unsigned char *p = (unsigned char *)pattern;
-    for (i = 0; i < TABLE_SIZE; ++i) {
+    for (i = 0; i < BAD_CHARACTER_TABLE_SIZE; ++i) {
         tbl[t][i] = m + 1;
     }
     for (i = 0; i < m; ++i) {

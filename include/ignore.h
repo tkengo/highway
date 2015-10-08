@@ -2,11 +2,14 @@
 #define _HW_IGNORE_H_
 
 #include "common.h"
+#include "file.h"
+
+#define IGNORE_TABLE_SIZE 256
 
 typedef struct _ignore_list_node ignore_list_node;
 
 struct _ignore_list_node {
-    char name[1024];
+    char name[MAX_PATH_LENGTH];
     int base_len;
     bool is_root;
     bool is_dir;
@@ -16,8 +19,8 @@ struct _ignore_list_node {
 };
 
 typedef struct _ignore_hash {
-    ignore_list_node *path[256];
-    ignore_list_node *ext[256];
+    ignore_list_node *path[IGNORE_TABLE_SIZE];
+    ignore_list_node *ext[IGNORE_TABLE_SIZE];
     ignore_list_node *glob;
     ignore_list_node *accept;
 } ignore_hash;

@@ -6,6 +6,7 @@
 
 #define BUF_SIZE_FOR_FILE_TYPE_CHECK 512
 #define AVAILABLE_ENCODING_COUNT 3
+#define MAX_PATH_LENGTH 1024
 
 enum file_type {
     FILE_TYPE_BINARY = -1,

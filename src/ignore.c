@@ -79,9 +79,8 @@ ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *
         hash = new_hash;
     }
 
-    const int BUF_SIZE = 1024;
-    char buf[BUF_SIZE];
-    while (fgets(buf, BUF_SIZE, fp) != NULL) {
+    char buf[MAX_PATH_LENGTH];
+    while (fgets(buf, MAX_PATH_LENGTH, fp) != NULL) {
         trim(buf);
         if (buf[0] == '#' || strlen(buf) == 0 || buf[0] == '\n' || buf[0] == '\r') {
             continue;
@@ -189,7 +188,7 @@ void free_ignore_hash(ignore_hash *hash, int depth)
 {
     ignore_list_node *node;
 
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < IGNORE_TABLE_SIZE; i++) {
         node = hash->ext[i];
         while (node) {
             if (node->depth < depth) {
@@ -202,7 +201,7 @@ void free_ignore_hash(ignore_hash *hash, int depth)
         hash->ext[i] = node;
     }
 
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < IGNORE_TABLE_SIZE; i++) {
         node = hash->path[i];
         while (node) {
             if (node->depth < depth) {
