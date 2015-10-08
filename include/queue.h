@@ -32,7 +32,6 @@ struct _file_queue_node {
     bool searched;
     bool matched;
     enum file_type t;
-    bool omit_matches;
 };
 
 struct _file_queue {

@@ -148,10 +148,6 @@ void *print_worker(void *arg)
                 print_to_terminal(filename, current);
             }
 
-            if (current->omit_matches) {
-                log_buffered("%s%s%s: Some results was omitted because too many matches was found, so you might want to specify --no-omit option", FILENAME_COLOR, current->filename, RESET_COLOR);
-            }
-
             free_matched_line_queue(current->match_lines);
         }
     }
@@ -220,7 +216,6 @@ void *search_worker(void *arg)
                 current->matched      = true;
                 current->match_lines  = match_line;
                 current->t            = t;
-                current->omit_matches = match_count < actual_match_count;
             } else {
                 // If the pattern was not matched, the lines queue is no longer needed, so do free.
                 free_matched_line_queue(match_line);

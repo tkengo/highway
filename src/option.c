@@ -26,6 +26,8 @@ void init_option(int argc, char **argv, hw_option *op)
         { "ignore-case",       no_argument,       NULL,  'i' },
         { "file-with-matches", no_argument,       NULL,  'l' },
         { "word-regexp",       no_argument,       NULL,  'w' },
+        { "after",             required_argument, NULL,  'A' },
+        { "before",            required_argument, NULL,  'B' },
         { "debug",             no_argument,       &flag, 1   },
         { "worker",            required_argument, &flag, 2   },
         { "no-omit",           no_argument,       &flag, 3   },
@@ -39,6 +41,8 @@ void init_option(int argc, char **argv, hw_option *op)
     op->root_paths[0]     = ".";
     op->paths_count       = 1;
     op->omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);
+    op->after             = 0;
+    op->before            = 0;
     op->file_with_matches = false;
     op->use_regex         = false;
     op->all_files         = false;
@@ -50,7 +54,7 @@ void init_option(int argc, char **argv, hw_option *op)
 
     int ch;
     bool word_regex = false;
-    while ((ch = getopt_long(argc, argv, "aefhilw", longopts, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "aefhilwA:B:", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -94,6 +98,14 @@ void init_option(int argc, char **argv, hw_option *op)
 
             case 'w': /* Match only whole word */
                 word_regex = true;
+                break;
+
+            case 'A': /* After */
+                op->after = atoi(optarg);
+                break;
+
+            case 'B': /* Before */
+                op->before = atoi(optarg);
                 break;
 
             case '?':
