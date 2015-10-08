@@ -147,7 +147,7 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
     char *new_buf;
     if (*cur_buf_size < need_size + buf_offset + N) {
         *cur_buf_size += N;
-        new_buf = (char *)tc_calloc(*cur_buf_size, sizeof(char));
+        new_buf = (char *)tc_calloc(*cur_buf_size, SIZE_OF_CHAR);
         memcpy(new_buf, copy_buf, need_size);
         free(current_buf);
     } else {
@@ -232,7 +232,7 @@ int format_line(const char *line,
     int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
     matched_line_queue_node *node = (matched_line_queue_node *)tc_malloc(sizeof(matched_line_queue_node));
     node->line_no = line_no;
-    node->line = (char *)tc_calloc(buffer_len, sizeof(char));
+    node->line = (char *)tc_calloc(buffer_len, SIZE_OF_CHAR);
 
     const char *s = line;
     int old_end = 0;
@@ -302,7 +302,7 @@ int search(int fd,
     int buf_offset = 0;
     int match_count = 0;
     bool do_search = false;
-    char *buf = (char *)tc_calloc(n, sizeof(char));
+    char *buf = (char *)tc_calloc(n, SIZE_OF_CHAR);
     char *last_new_line_scan_pos = buf;
     match m;
 
