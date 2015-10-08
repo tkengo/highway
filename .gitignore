@@ -13,6 +13,8 @@
 /configure
 /config.log
 /config.status
+/install-sh
+/missing
 
 *.o
 .deps
