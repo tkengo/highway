@@ -1,7 +1,7 @@
 #ifndef _HW_TABLE_H_
 #define _HW_TABLE_H_
 
-#define TABLE_SIZE 256
+#define BAD_CHARACTER_TABLE_SIZE 256
 #define N 65536
 #define MAX_MATCH_COUNT 1000
 
@@ -22,5 +22,6 @@ typedef struct _match {
 void generate_bad_character_table(const char *pattern, enum file_type t);
 int search(int fd, const char *pattern, int pattern_len, enum file_type t, matched_line_queue *match_line);
 int search_stream(const char *pattern);
+void free_fjs();
 
 #endif // _HW_TABLE_H_

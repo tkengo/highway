@@ -130,13 +130,13 @@ enum file_type detect_type_type(int fd)
  * Check if the directory entry is ignored by the highway. The directory is ignored if it is the
  * current directory or upper directory or hidden directory(started directory name with dot `.`).
  */
-bool is_skip_directory(const struct dirent *entry)
+bool is_skip_entry(const struct dirent *entry)
 {
     bool cur    = entry->d_namlen == 1 && entry->d_name[0] == '.';
     bool up     = entry->d_namlen == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool hidden = entry->d_namlen  > 1 && entry->d_name[0] == '.' && !op.all_files;
 
-    return is_directory(entry) && (cur || up || hidden);
+    return (is_directory(entry) && (cur || up)) || hidden;
 }
 
 bool is_directory(const struct dirent *entry)

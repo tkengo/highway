@@ -8,127 +8,102 @@
 #include "ignore.h"
 #include "file.h"
 #include "util.h"
+#include "log.h"
 
-ignore_list_node *add_ignore_list(ignore_list *list, const char *base, char *ignore)
+void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int depth)
 {
-    bool acceptable = ignore[0] == '!';
+    ignore_list_node *node = (ignore_list_node *)tc_calloc(1, sizeof(ignore_list_node));
+
+    bool acceptable = pattern[0] == '!';
     if (acceptable) {
-        ignore++;
+        pattern++;
     }
 
-    ignore_list_node *node = (ignore_list_node *)tc_malloc(sizeof(ignore_list_node));
-
-    node->next = NULL;
-
-    node->is_root = *ignore == '/';
-    node->base_len = strlen(base);
-
-    int len = strlen(ignore);
-    if (ignore[len - 1] == '/') {
-        node->is_dir = true;
-        ignore[len - 1] = '\0';
-    }
-    if (strlen(ignore) == 0) {
-        return NULL;
-    }
-
-    node->is_no_dir = index(ignore, '/') == NULL;
-
+    node->is_root = pattern[0] == '/';
     if (node->is_root) {
-        sprintf(node->ignore, "%s%s", base, ignore);
-    } else {
-        strcpy(node->ignore, ignore);
+        pattern++;
     }
 
+    int last_index = strlen(pattern) - 1;
+    if (last_index == 0) {
+        return;
+    }
+
+    node->depth = depth;
+    node->is_dir = pattern[last_index] == '/';
+    if (node->is_dir) {
+        pattern[last_index] = '\0';
+    }
+    node->is_no_dir = index(pattern, '/') == NULL;
+
+    ignore_list_node **first;
     if (acceptable) {
-        if (list->acceptable_first) {
-            list->acceptable_last->next = node;
-            list->acceptable_last = node;
-        } else {
-            list->acceptable_first = node;
-            list->acceptable_last  = node;
-        }
+        // This is acceptable pattern.
+        strcpy(node->name, pattern);
+        first = &hash->accept;
+    } else if (pattern[0] == '*' && pattern[1] == '.' && strpbrk(pattern + 2, ".?*[]") == NULL) {
+        // If a pattern was matched above condition, it represents the "extention". For instance:
+        // *.c, *.cpp, *.h, and so on...
+        strcpy(node->name, pattern + 2);
+        first = &hash->ext[node->name[0]];
+    } else if (strpbrk(pattern, "?*[]") != NULL || (!node->is_root && !node->is_no_dir)) {
+        // This is handled as a glob format, so fnmatch is used in matching test. For instance:
+        // test*, src/test.c, and so on ...
+        strcpy(node->name, pattern);
+        first = &hash->glob;
     } else {
-        if (list->first) {
-            list->last->next = node;
-            list->last = node;
+        if (node->is_root) {
+            sprintf(node->name, "%s%s", base, pattern);
         } else {
-            list->first = node;
-            list->last  = node;
+            strcpy(node->name, pattern);
         }
+        first = &hash->path[node->name[0]];
     }
 
-    return node;
+    node->next = *first;
+    *first = node;
 }
 
-/**
- * Create ignore list from the .gitignore file in the specified path. Return NULL if there is no
- * the .gitignore file.
- */
-ignore_list *create_ignore_list_from_gitignore(const char *base, const char *path)
+ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *path, int depth)
 {
     FILE *fp = fopen(path, "r");
     if (!fp) {
         fclose(fp);
-        return NULL;
+        return hash;
     }
 
-    ignore_list *list = (ignore_list *)tc_malloc(sizeof(ignore_list));
-    list->first = NULL;
-    list->last  = NULL;
-    list->acceptable_first = NULL;
-    list->acceptable_last  = NULL;
+    if (hash == NULL) {
+        ignore_hash *new_hash = (ignore_hash *)tc_malloc(sizeof(ignore_hash));
+        new_hash->glob = NULL;
+        new_hash->accept = NULL;
+        hash = new_hash;
+    }
 
-    char buf[1024];
-    int count = 0;
-    while (fgets(buf, 1024, fp) != NULL) {
+    char buf[MAX_PATH_LENGTH];
+    while (fgets(buf, MAX_PATH_LENGTH, fp) != NULL) {
         trim(buf);
-        if (buf[0] == '#' || strlen(buf) == 0) {
+        if (buf[0] == '#' || strlen(buf) == 0 || buf[0] == '\n' || buf[0] == '\r') {
             continue;
         }
-        add_ignore_list(list, base, buf);
-        count++;
-    }
-    fclose(fp);
-
-    if (count == 0) {
-        free(list);
-        return NULL;
+        add_ignore_node(hash, base, buf, depth);
     }
 
-    return list;
+    return hash;
 }
 
-ignore_list *create_ignore_list_from_list(const char *base, const char *path, ignore_list *list)
+/**
+ * Load ignore list from the .gitignore file in the specified path. Return NULL if there is no
+ * .gitignore file.
+ */
+ignore_hash *load_ignore_hash(const char *base, const char *path, int depth)
 {
-    ignore_list *new_list = create_ignore_list_from_gitignore(base, path);
-    if (new_list == NULL) {
-        return list;
-    }
-
-    ignore_list_node *node = list->first;
-    while (node) {
-        if (!node->is_root) {
-            ignore_list_node *new_node = (ignore_list_node *)tc_malloc(sizeof(ignore_list_node));
-            *new_node = *node;
-            new_node->next = NULL;
-            if (new_list->last) {
-                new_list->last->next = new_node;
-                new_list->last = new_node;
-            } else {
-                list->first = new_node;
-                list->last  = new_node;
-            }
-        }
-        node = node->next;
-    }
-
-    return new_list;
+    return merge_ignore_hash(NULL, base, path, depth);
 }
 
-bool match_path(ignore_list_node *node, const char *path, const struct dirent *entry)
+bool match_path(ignore_list_node *node, const char *path, const struct dirent *entry, int depth)
 {
     while (node) {
+        bool is_skip = (node->is_dir && !is_directory(entry));
         if (node->is_dir && !is_directory(entry)) {
             node = node->next;
             continue;
@@ -136,13 +111,13 @@ bool match_path(ignore_list_node *node, const char *path, const struct dirent *e
 
         int res;
         if (node->is_root) {
-            res = fnmatch(node->ignore, path, FNM_PATHNAME);
+            res = fnmatch(node->name, path, FNM_PATHNAME);
         } else if (node->is_no_dir) {
-            res = fnmatch(node->ignore, entry->d_name, 0);
+            res = fnmatch(node->name, entry->d_name, 0);
         } else {
-            res = strstr(path + node->base_len, node->ignore) != NULL ?
+            res = strstr(path + node->base_len, node->name) != NULL ?
                   0 :
-                  fnmatch(node->ignore, path + node->base_len + 1, 0);
+                  fnmatch(node->name, path + node->base_len + 1, 0);
         }
 
         if (res == 0) {
@@ -155,23 +130,109 @@ bool match_path(ignore_list_node *node, const char *path, const struct dirent *e
     return false;
 }
 
-bool is_ignore(ignore_list *list, const char *path, const struct dirent *entry)
+bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, int depth)
 {
-    if (match_path(list->acceptable_first, path, entry)) {
+    if (match_path(hash->accept, path, entry, depth)) {
         return false;
     }
 
-    return match_path(list->first, path, entry);
-}
+    ignore_list_node *node;
 
-void free_ignore_list(ignore_list *list)
-{
-    ignore_list_node *node = list->first;
-    while (node) {
-        ignore_list_node *next = node->next;
-        free(node);
-        node = next;
+    char *ext = rindex(path, '.');
+    if (ext && ext[1] != '\0') {
+        ext++;
+        node = hash->ext[ext[0]];
+        while (node) {
+            if (strcmp(ext, node->name) == 0) {
+                return true;
+            }
+            node = node->next;
+        }
     }
 
-    free(list);
+    node = hash->path[path[0]];
+    while (node) {
+        bool is_skip = (node->is_dir && !is_directory(entry)) ||
+                       !node->is_root;
+        if (is_skip) {
+            node = node->next;
+            continue;
+        }
+
+        if (strcmp(path, node->name) == 0) {
+            return true;
+        }
+        node = node->next;
+    }
+
+    node = hash->path[entry->d_name[0]];
+    while (node) {
+        bool is_skip = (node->is_dir && !is_directory(entry)) ||
+                       !node->is_no_dir ||
+                       node->is_root;
+        if (is_skip) {
+            node = node->next;
+            continue;
+        }
+
+        if (strcmp(entry->d_name, node->name) == 0) {
+            return true;
+        }
+        node = node->next;
+    }
+
+    return match_path(hash->glob, path, entry, depth);
+}
+
+void free_ignore_hash(ignore_hash *hash, int depth)
+{
+    ignore_list_node *node;
+
+    for (int i = 0; i < IGNORE_TABLE_SIZE; i++) {
+        node = hash->ext[i];
+        while (node) {
+            if (node->depth < depth) {
+                break;
+            }
+            ignore_list_node *unnecessary = node;
+            node = node->next;
+            free(unnecessary);
+        }
+        hash->ext[i] = node;
+    }
+
+    for (int i = 0; i < IGNORE_TABLE_SIZE; i++) {
+        node = hash->path[i];
+        while (node) {
+            if (node->depth < depth) {
+                break;
+            }
+            ignore_list_node *unnecessary = node;
+            node = node->next;
+            free(unnecessary);
+        }
+        hash->path[i] = node;
+    }
+
+    node = hash->glob;
+    while (node) {
+        if (node->depth < depth) {
+            break;
+        }
+        ignore_list_node *unnecessary = node;
+        node = node->next;
+        free(unnecessary);
+    }
+    hash->glob = node;
+
+    node = hash->accept;
+    while (node) {
+        if (node->depth < depth) {
+            break;
+        }
+        ignore_list_node *unnecessary = node;
+        node = node->next;
+        free(unnecessary);
+    }
+    hash->accept = node;
 }

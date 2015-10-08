@@ -21,9 +21,10 @@ struct _matched_line_queue {
 };
 
 #include "search.h"
+#include "file.h"
 
 struct _file_queue_node {
-    char filename[1024];
+    char filename[MAX_PATH_LENGTH];
     int id;
     file_queue_node *next;
     matched_line_queue *match_lines;
