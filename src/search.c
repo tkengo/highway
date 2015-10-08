@@ -293,12 +293,14 @@ int search(int fd,
            enum file_type t,
            matched_line_queue *match_line)
 {
+    char eol = '\n';
     size_t line_count = 0;
     size_t read_sum = 0;
     size_t n = N;
     size_t read_len;
     int buf_offset = 0;
     int match_count = 0;
+    bool do_search = false;
     char *buf = (char *)tc_calloc(n, sizeof(char));
     char *last_new_line_scan_pos = buf;
     match m;
@@ -307,11 +309,12 @@ int search(int fd,
         prepare_fjs(pattern, pattern_len, t);
     }
 
+do_search:
     while ((read_len = read(fd, buf + buf_offset, N)) > 0) {
         read_sum += read_len;
 
         // Search end of position of the last line in the buffer.
-        char *last_line_end = reverse_char(buf + buf_offset, '\n', read_len);
+        char *last_line_end = reverse_char(buf + buf_offset, eol, read_len);
         if (last_line_end == NULL) {
             buf = last_new_line_scan_pos = grow_buf_if_shortage(&n, read_sum, buf_offset, buf, buf);
             buf_offset += read_len;
@@ -321,13 +324,14 @@ int search(int fd,
         size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
         size_t org_search_len = search_len;
         char *p = buf;
+        do_search = true;
 
         // Search the first pattern in the buffer.
         while (search_by(p, search_len, pattern, pattern_len, t, &m)) {
             // Search head/end of the line, then calculate line length by using them.
             int plen = m.end - m.start;
-            char *line_head = reverse_char(p, '\n', m.start);
-            char *line_end  = memchr(p + m.start + plen, '\n', search_len - m.start - plen + 1);
+            char *line_head = reverse_char(p, eol, m.start);
+            char *line_end  = memchr(p + m.start + plen, eol, search_len - m.start - plen + 1);
             line_head = line_head == NULL ? p : line_head + 1;
             int line_len = line_end - line_head;
 
@@ -360,6 +364,12 @@ int search(int fd,
 
         buf_offset = rest;
         read_sum = rest;
+    }
+
+    if (!do_search && eol == '\n') {
+        eol = '\r';
+        lseek(fd, 0, SEEK_SET);
+        goto do_search;
     }
 
     free(buf);
