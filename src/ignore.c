@@ -12,7 +12,7 @@
 
 void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int depth)
 {
-    ignore_list_node *node = (ignore_list_node *)tc_calloc(1, sizeof(ignore_list_node));
+    ignore_node *node = (ignore_node *)tc_calloc(1, sizeof(ignore_node));
 
     bool acceptable = pattern[0] == '!';
     if (acceptable) {
@@ -36,7 +36,7 @@ void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int dep
     }
     node->is_no_dir = index(pattern, '/') == NULL;
 
-    ignore_list_node **first;
+    ignore_node **first;
     if (acceptable) {
         // This is acceptable pattern.
         strcpy(node->name, pattern);
@@ -100,7 +100,7 @@ ignore_hash *load_ignore_hash(const char *base, const char *path, int depth)
     return merge_ignore_hash(NULL, base, path, depth);
 }
 
-bool match_path(ignore_list_node *node, const char *path, const struct dirent *entry, int depth)
+bool match_path(ignore_node *node, const char *path, const struct dirent *entry, int depth)
 {
     while (node) {
         bool is_skip = (node->is_dir && !is_directory(entry));
@@ -136,7 +136,7 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
         return false;
     }
 
-    ignore_list_node *node;
+    ignore_node *node;
 
     char *ext = rindex(path, '.');
     if (ext && ext[1] != '\0') {
@@ -184,55 +184,31 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
     return match_path(hash->glob, path, entry, depth);
 }
 
+ignore_node *free_ignore_hash_by_depth(ignore_node *node, int depth)
+{
+    while (node) {
+        if (node->depth < depth) {
+            break;
+        }
+        ignore_node *unnecessary = node;
+        node = node->next;
+        free(unnecessary);
+    }
+    return node;
+}
+
 void free_ignore_hash(ignore_hash *hash, int depth)
 {
-    ignore_list_node *node;
+    ignore_node *node;
 
     for (int i = 0; i < IGNORE_TABLE_SIZE; i++) {
-        node = hash->ext[i];
-        while (node) {
-            if (node->depth < depth) {
-                break;
-            }
-            ignore_list_node *unnecessary = node;
-            node = node->next;
-            free(unnecessary);
-        }
-        hash->ext[i] = node;
+        hash->ext[i] = free_ignore_hash_by_depth(hash->ext[i], depth);
     }
 
     for (int i = 0; i < IGNORE_TABLE_SIZE; i++) {
-        node = hash->path[i];
-        while (node) {
-            if (node->depth < depth) {
-                break;
-            }
-            ignore_list_node *unnecessary = node;
-            node = node->next;
-            free(unnecessary);
-        }
-        hash->path[i] = node;
+        hash->path[i] = free_ignore_hash_by_depth(hash->path[i], depth);
     }
 
-    node = hash->glob;
-    while (node) {
-        if (node->depth < depth) {
-            break;
-        }
-        ignore_list_node *unnecessary = node;
-        node = node->next;
-        free(unnecessary);
-    }
-    hash->glob = node;
-
-    node = hash->accept;
-    while (node) {
-        if (node->depth < depth) {
-            break;
-        }
-        ignore_list_node *unnecessary = node;
-        node = node->next;
-        free(unnecessary);
-    }
-    hash->accept = node;
+    hash->glob   = free_ignore_hash_by_depth(hash->glob, depth);
+    hash->accept = free_ignore_hash_by_depth(hash->accept, depth);
 }
