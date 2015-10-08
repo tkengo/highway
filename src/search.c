@@ -13,6 +13,7 @@
 #define APPEND_DOT(t) strcat((t), OMIT_COLOR);\
                       strcat((t), "....");\
                       strcat((t), RESET_COLOR)
+#define DOT_LENGTH 4
 
 static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
@@ -243,11 +244,11 @@ int format_line(const char *line,
 
         if (!op.stdout_redirect && matches[i].start - old_end > op.omit_threshold) {
             if (i == 0) {
-                int rest_len = op.omit_threshold - 4;
+                int rest_len = op.omit_threshold - DOT_LENGTH;
                 APPEND_DOT(node->line);
                 strncat(node->line, s + prefix_len - rest_len, rest_len);
             } else {
-                int rest_len = op.omit_threshold / 2 - 2;
+                int rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
                 strncat(node->line, s, rest_len);
                 APPEND_DOT(node->line);
                 strncat(node->line, s + prefix_len - rest_len, rest_len);
@@ -273,7 +274,7 @@ int format_line(const char *line,
     int last_end = matches[match_count - 1].end;
     int suffix_len = line_len - last_end;
     if (suffix_len > op.omit_threshold) {
-        strncat(node->line, s, op.omit_threshold - 4);
+        strncat(node->line, s, op.omit_threshold - DOT_LENGTH);
         APPEND_DOT(node->line);
     } else {
         strncat(node->line, s, line_len - last_end);
