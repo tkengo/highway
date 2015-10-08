@@ -40,58 +40,60 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
  * Find search target files recursively under the specified directories, and add filenames to the
  * queue used by search worker.
  */
-bool find_target_files(file_queue *queue, const char *path, ignore_list *ignores)
+bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ignores, int depth)
 {
-    char buf[1024];
+    char buf[1024], base[1024];
 
     // Open the path as a directory. If it is not a directory, check whether if it is a file,
     // and then add the file to the queue if it is true.
-    DIR *dir = opendir(path);
+    DIR *dir = opendir(dir_path);
     if (dir == NULL) {
-        if (access(path, F_OK) == 0) {
-            enqueue_file_exclusively(queue, path);
+        if (access(dir_path, F_OK) == 0) {
+            enqueue_file_exclusively(queue, dir_path);
             return true;
         } else {
-            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", path);
+            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", dir_path);
             return false;
         }
     }
 
-    bool need_free = false;
+    if (strcmp(dir_path, ".") == 0) {
+        strcpy(base, "");
+    } else {
+        sprintf(base, "%s/", dir_path);
+    }
+
     if (!op.all_files) {
-        sprintf(buf, "%s/%s", path, ".gitignore");
+        sprintf(buf, "%s%s", base, ".gitignore");
         if (access(buf, F_OK) == 0) {
             // Create search ignore list from the .gitignore file. New list is created if there are
             // not ignore file upper directories, otherwise the list will be inherited.
             if (ignores == NULL) {
-                ignores = create_ignore_list_from_gitignore(path, buf);
-                need_free = true;
+                ignores = load_ignore_hash(base, buf, depth);
             } else {
-                ignore_list *old_ignores = ignores;
-                ignores = create_ignore_list_from_list(path, buf, ignores);
-                need_free = old_ignores != ignores;
+                ignores = merge_ignore_hash(ignores, base, buf, depth);
             }
         }
     }
 
-    int offset = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         // `readdir` returns also current or upper directory, but we don't need that directories,
         // so skip them. And also hidden directory doesn't need.
-        if (is_skip_directory(entry)) {
+        if (is_skip_entry(entry)) {
             continue;
         }
 
+        sprintf(buf, "%s%s", base, entry->d_name);
+
         // Check whether if the file is ignored by gitignore. If it is ignored, skip finding.
-        sprintf(buf, "%s/%s", path, entry->d_name);
-        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
+        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry, depth)) {
             continue;
         }
 
         // Check if symlink exists. Skip this entry if not exist.
         if (op.follow_link && entry->d_type == DT_LNK) {
-            char link[1024];
+            char link[1024] = { 0 };
             readlink(buf, link, 1024);
             if (access(link, F_OK) != 0) {
                 continue;
@@ -99,14 +101,14 @@ bool find_target_files(file_queue *queue, const char *path, ignore_list *ignores
         }
 
         if (is_directory(entry)) {
-            find_target_files(queue, buf + offset, ignores);
+            find_target_files(queue, buf, ignores, depth + 1);
         } else if (is_search_target(entry)) {
-            enqueue_file_exclusively(queue, buf + offset);
+            enqueue_file_exclusively(queue, buf);
         }
     }
 
-    if (!op.all_files && ignores != NULL && need_free) {
-        free_ignore_list(ignores);
+    if (!op.all_files && ignores != NULL) {
+        free_ignore_hash(ignores, depth);
     }
 
     closedir(dir);
@@ -125,7 +127,7 @@ int process_by_terminal()
     log_d("Worker num: %d", op.worker);
 
     for (int i = 0; i < op.paths_count; i++) {
-        find_target_files(queue, op.root_paths[i], NULL);
+        find_target_files(queue, op.root_paths[i], NULL, 0);
     }
     complete_finding_file = true;
     pthread_cond_broadcast(&file_cond);
@@ -179,7 +181,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    setvbuf(stdout, NULL, _IOFBF, 1024 * 32);
+    setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
 
     if (IS_STDIN_REDIRECT) {
         return_code = process_by_redirection();
