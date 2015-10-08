@@ -195,6 +195,8 @@ int main(int argc, char **argv)
 
     if (op.use_regex) {
         onig_end_wrap();
+    } else {
+        free_fjs();
     }
 
     log_flush();

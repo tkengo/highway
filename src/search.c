@@ -17,7 +17,7 @@
 static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
 
-static int betap[100 + 1];
+static int *gbetap[AVAILABLE_ENCODING_COUNT] = { 0 };
 
 char *reverse_char(const char *buf, char c, size_t n)
 {
@@ -50,6 +50,7 @@ void prepare_fjs(const char *pattern, int pattern_len, enum file_type t)
     }
 
     // Generate betap.
+    int *betap = gbetap[t] = (int *)tc_malloc(sizeof(int) * (pattern_len + 1));
     i = 0;
     j = betap[0] = -1;
     while (i < m) {
@@ -66,6 +67,15 @@ void prepare_fjs(const char *pattern, int pattern_len, enum file_type t)
     tbl_created[t] = true;
 }
 
+void free_fjs()
+{
+    for (int i = 0; i < AVAILABLE_ENCODING_COUNT; i++) {
+        if (gbetap[i] != NULL) {
+            free(gbetap[i]);
+        }
+    }
+}
+
 bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, enum file_type t, match *mt)
 {
     const unsigned char *p = (unsigned char *)pattern;
@@ -76,6 +86,7 @@ bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, 
         return false;
     }
 
+    int *betap = gbetap[t];
     int i = 0, j = 0, mp = m - 1, ip = mp;
     while (ip < n) {
         if (j <= 0) {
