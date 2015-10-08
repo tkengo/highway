@@ -126,10 +126,10 @@ bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, 
     return false;
 }
 
-char *scan_newline(char *from, char *to, size_t *line_count)
+char *scan_newline(char *from, char *to, size_t *line_count, char eol)
 {
     const char *start = from;
-    while (start <= to && (start = memchr(start, '\n', to - start + 1)) != NULL) {
+    while (start <= to && (start = memchr(start, eol, to - start + 1)) != NULL) {
         start++;
         (*line_count)++;
     }
@@ -321,10 +321,11 @@ do_search:
             continue;
         }
 
+        do_search = true;
+
         size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
         size_t org_search_len = search_len;
         char *p = buf;
-        do_search = true;
 
         // Search the first pattern in the buffer.
         while (search_by(p, search_len, pattern, pattern_len, t, &m)) {
@@ -336,7 +337,7 @@ do_search:
             int line_len = line_end - line_head;
 
             // Count lines.
-            last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count);
+            last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count, eol);
 
             m.start -= line_head - p;
             m.end    = m.start + plen;
@@ -346,7 +347,7 @@ do_search:
             p = line_end + 1;
         }
 
-        last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count);
+        last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);
 
         if (read_len < N) {
             break;
@@ -368,6 +369,7 @@ do_search:
 
     if (!do_search && eol == '\n') {
         eol = '\r';
+        read_sum = buf_offset = 0;
         lseek(fd, 0, SEEK_SET);
         goto do_search;
     }
