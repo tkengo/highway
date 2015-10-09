@@ -20,7 +20,7 @@ typedef struct _match {
 #include "option.h"
 
 void generate_bad_character_table(const char *pattern, enum file_type t);
-int search(int fd, const char *pattern, int pattern_len, enum file_type t, matched_line_queue *match_line);
+int search(int fd, const char *pattern, int pattern_len, enum file_type t, matched_line_queue *match_line, int thread_no);
 int search_stream(const char *pattern);
 void free_fjs();
 

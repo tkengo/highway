@@ -118,12 +118,19 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
 int process_by_terminal()
 {
     file_queue *queue = create_file_queue();
-    worker_params params = { queue };
+
+    // Launch worker count threads for searching pattern from files.
     pthread_t th[op.worker], pth;
+    worker_params search_params[op.worker];
     for (int i = 0; i < op.worker; i++) {
-        pthread_create(&th[i], NULL, (void *)search_worker, (void *)&params);
+        search_params[i].index = i;
+        search_params[i].queue = queue;
+        pthread_create(&th[i], NULL, (void *)search_worker, (void *)&search_params[i]);
     }
-    pthread_create(&pth, NULL, (void *)print_worker, (void *)&params);
+
+    // Launch one threads for printing result.
+    worker_params print_params = { op.worker, queue };
+    pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params);
     log_d("Worker num: %d", op.worker);
 
     for (int i = 0; i < op.paths_count; i++) {
@@ -145,7 +152,7 @@ int process_by_terminal()
 int process_by_redirection()
 {
     matched_line_queue *match_line = create_matched_line_queue();
-    int match_count = search(STDIN_FILENO, op.pattern, strlen(op.pattern), FILE_TYPE_UTF8, match_line);
+    int match_count = search(STDIN_FILENO, op.pattern, strlen(op.pattern), FILE_TYPE_UTF8, match_line, 0);
 
     if (match_count > 0) {
         char *filename = "stream";

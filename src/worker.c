@@ -207,7 +207,7 @@ void *search_worker(void *arg)
             // Searching.
             int actual_match_count = 0;
             matched_line_queue *match_line = create_matched_line_queue();
-            int match_count = search(fd, pattern, pattern_len, t, match_line);
+            int match_count = search(fd, pattern, pattern_len, t, match_line, params->index);
 
             if (match_count > 0) {
                 // Set additional data to the queue data because it will be used on print worker in

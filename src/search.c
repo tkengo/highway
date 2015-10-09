@@ -161,13 +161,14 @@ bool regex(const char *buf,
           size_t search_len,
           const char *pattern,
           enum file_type t,
-          match *m)
+          match *m,
+          int thread_no)
 {
     OnigRegion *region = onig_region_new();
 
     // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
     // but this wrapper method is implemented in thread safety.
-    regex_t *reg = onig_new_wrap(pattern, t, op.ignore_case);
+    regex_t *reg = onig_new_wrap(pattern, t, op.ignore_case, thread_no);
     if (reg == NULL) {
         return false;
     }
@@ -192,10 +193,11 @@ int search_by(const char *buf,
               const char *pattern,
               int pattern_len,
               enum file_type t,
-              match *m)
+              match *m,
+              int thread_no)
 {
     if (op.use_regex) {
-        return regex(buf, search_len, pattern, t, m);
+        return regex(buf, search_len, pattern, t, m, thread_no);
     } else {
         return fjs(buf, search_len, pattern, pattern_len, t, m);
     }
@@ -208,7 +210,8 @@ int format_line(const char *line,
                 enum file_type t,
                 int line_no,
                 match *first_match,
-                matched_line_queue *match_line)
+                matched_line_queue *match_line,
+                int thread_no)
 {
     int n = 10;
     int pos = 0, match_count = 1;
@@ -216,7 +219,7 @@ int format_line(const char *line,
     match *matches = (match *)tc_malloc(sizeof(match) * n);
     matches[0] = *first_match;
 
-    while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, &matches[match_count])) {
+    while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, &matches[match_count], thread_no)) {
         if (n <= match_count) {
             n *= 2;
             matches = (match *)realloc(matches, sizeof(match) * n);
@@ -292,7 +295,8 @@ int search(int fd,
            const char *pattern,
            int pattern_len,
            enum file_type t,
-           matched_line_queue *match_line)
+           matched_line_queue *match_line,
+           int thread_no)
 {
     char eol = '\n';
     size_t line_count = 0;
@@ -329,7 +333,7 @@ do_search:
         char *p = buf;
 
         // Search the first pattern in the buffer.
-        while (search_by(p, search_len, pattern, pattern_len, t, &m)) {
+        while (search_by(p, search_len, pattern, pattern_len, t, &m, thread_no)) {
             // Search head/end of the line, then calculate line length by using them.
             int plen = m.end - m.start;
             char *line_head = reverse_char(p, eol, m.start);
@@ -342,7 +346,7 @@ do_search:
 
             m.start -= line_head - p;
             m.end    = m.start + plen;
-            match_count += format_line(line_head, line_len, pattern, plen, t, line_count, &m, match_line);
+            match_count += format_line(line_head, line_len, pattern, plen, t, line_count, &m, match_line, thread_no);
 
             search_len -= line_end - p + 1;
             p = line_end + 1;

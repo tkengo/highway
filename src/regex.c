@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include "common.h"
@@ -6,6 +7,7 @@
 
 static pthread_mutex_t onig_mutex;
 static regex_t **reg;
+static enum file_type current;
 
 /**
  * Initialize onigmo and mutex for onigmo.
@@ -22,7 +24,7 @@ bool onig_init_wrap()
         return false;
     }
 
-    reg = (regex_t **)calloc(AVAILABLE_ENCODING_COUNT, sizeof(regex_t *));
+    reg = (regex_t **)calloc(op.worker, sizeof(regex_t *));
 
     return true;
 }
@@ -32,8 +34,10 @@ bool onig_init_wrap()
  */
 void onig_end_wrap()
 {
-    for (int i = 0; i < AVAILABLE_ENCODING_COUNT; i++) {
-        onig_free(reg[i]);
+    for (int i = 0; i < op.worker; i++) {
+        if (reg[i] != NULL) {
+            onig_free(reg[i]);
+        }
     }
     free(reg);
 
@@ -44,10 +48,10 @@ void onig_end_wrap()
 /**
  * Thread safety onig_new.
  */
-regex_t *onig_new_wrap(const char *pattern, enum file_type t, bool ignore_case)
+regex_t *onig_new_wrap(const char *pattern, enum file_type t, bool ignore_case, int thread_no)
 {
-    if (reg[t] != NULL) {
-        return reg[t];
+    if (current == t && reg[thread_no] != NULL) {
+        return reg[thread_no];
     }
 
     OnigErrorInfo einfo;
@@ -67,12 +71,13 @@ regex_t *onig_new_wrap(const char *pattern, enum file_type t, bool ignore_case)
     }
     pthread_mutex_lock(&onig_mutex);
     long option = ignore_case ? ONIG_OPTION_IGNORECASE : ONIG_OPTION_DEFAULT;
-    int r = onig_new(&reg[t], p, p + strlen(pattern), option, enc, ONIG_SYNTAX_DEFAULT, &einfo);
+    int r = onig_new(&reg[thread_no], p, p + strlen(pattern), option, enc, ONIG_SYNTAX_DEFAULT, &einfo);
+    current = t;
     pthread_mutex_unlock(&onig_mutex);
 
     if (r != ONIG_NORMAL) {
         return NULL;
     }
 
-    return reg[t];
+    return reg[thread_no];
 }

@@ -6,6 +6,7 @@
 #include "option.h"
 
 typedef struct _worker_params {
+    int index;
     file_queue *queue;
 } worker_params;
 
