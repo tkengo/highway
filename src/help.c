@@ -16,15 +16,23 @@ void usage()
     u("Example:");
     u("  hw hoge src/ include/ tmp/test.txt");
     u("");
-    u("OPTIONS List:");
+    u("Search options:");
     u("  -a, --all-files          Search all files.");
     u("  -e                       Parse PATTERN as a regular expression.");
-    u("  -f, --follow-link        Follow symlinks on finding files.");
+    u("  -f, --follow-link        Follow symlinks.");
     u("  -i, --ignore-case        Match case insensitively.");
     u("  -l, --file-with-matches  Only print filenames that contain matches.");
-    u("      --no-omit            Show all matches even if too many matches was found.");
-    u("                           You don't have to use this option usually.");
     u("  -w, --word-regexp        Only match whole words.");
+    u("");
+    u("Output options:");
+    u("      --no-omit            Show all characters even if too long lines were matched.");
+    u("                           By default hw print only characters near by PATTERN if");
+    u("                           the line was too long.");
+    u("");
+    u("Context control:");
+    u("  -A, --after-context NUM  Print NUM lines after match.");
+    u("  -B, --before-context NUM Print NUM lines before match.");
+    u("  -C, --context NUM        Print NUM lines before and after matches.");
     u("");
     u("  -h, --help               Show options help and some concept guides.");
 }
