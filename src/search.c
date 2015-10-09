@@ -299,16 +299,12 @@ void before_context(const char *buf,
 
     int before_count = 0;
     for (int i = 0; i < op.before; i++) {
-        if (lines[i] == buf || last_match_line_end_pos == lines[i] - 1) {
+        if (lines[i] == buf || last_match_line_end_pos == lines[i]) {
             break;
         }
 
         const char *p = reverse_char(buf, eol, lines[i] - buf - 1);
-        if (p == NULL) {
-            p = buf;
-        } else {
-            ++p;
-        }
+        p = p == NULL ? buf : p + 1;
 
         lines[i + 1] = p;
         before_count++;
@@ -325,6 +321,38 @@ void before_context(const char *buf,
         strncat(node->line, lines[i], line_len);
         enqueue_match_line(match_lines, node);
     }
+}
+
+char *after_context(const char *line_head,
+                    char *last_line_end,
+                    int rest_len,
+                    int line_no,
+                    match_line_list *match_lines,
+                    char eol)
+{
+    for (int i = 0; i < op.after; i++) {
+        if (line_head == last_line_end) {
+            break;
+        }
+        char *after_line = memchr(last_line_end, eol, rest_len);
+        if (after_line == NULL) {
+            break;
+        }
+
+        int line_len = after_line - last_line_end;
+
+        match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
+        node->line_no = line_no + i + 1;
+        node->context = CONTEXT_AFTER;
+        node->line = (char *)tc_calloc(line_len + 1, SIZE_OF_CHAR);
+
+        strncat(node->line, last_line_end, line_len);
+        enqueue_match_line(match_lines, node);
+
+        last_line_end = ++after_line;
+    }
+
+    return last_line_end;
 }
 
 /**
@@ -368,29 +396,32 @@ do_search:
 
         do_search = true;
 
-        size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
+        size_t search_len = last_line_end - buf;
         size_t org_search_len = search_len;
-        char *last_match_line_end_pos = NULL;
         char *p = buf;
 
         // Search the first pattern in the buffer.
         while (search_by(p, search_len, pattern, pattern_len, t, &m, thread_no)) {
             // Search head/end of the line, then calculate line length by using them.
             int plen = m.end - m.start;
+            size_t rest_len = search_len - m.start - plen + 1;
             char *line_head = reverse_char(p, eol, m.start);
-            char *line_end  = memchr(p + m.start + plen, eol, search_len - m.start - plen + 1);
+            char *line_end  = memchr(p + m.start + plen, eol, rest_len);
             line_head = line_head == NULL ? p : line_head + 1;
             int line_len = line_end - line_head;
+
+            // Show after context.
+            char *last_line_end_by_after = p;
+            if (match_count > 0 && op.after > 0) {
+                last_line_end_by_after = after_context(line_head, p, p - buf, line_count, match_line, eol);
+            }
 
             // Count lines.
             last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count, eol);
 
-            if (match_count > 0 && op.after > 0) {
-            }
-
             // Show before context.
             if (op.before > 0) {
-                before_context(buf, line_head, last_match_line_end_pos, line_count, match_line, eol);
+                before_context(buf, line_head, last_line_end_by_after, line_count, match_line, eol);
             }
 
             m.start -= line_head - p;
@@ -399,9 +430,11 @@ do_search:
 
             search_len -= line_end - p + 1;
             p = line_end + 1;
-            last_match_line_end_pos = line_end;
         }
 
+        if (match_count > 0 && op.after > 0) {
+            after_context(NULL, p, p - buf, line_count, match_line, eol);
+        }
         last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);
 
         if (read_len < N) {

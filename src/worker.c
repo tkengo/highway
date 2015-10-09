@@ -58,10 +58,16 @@ void print_to_terminal(const char *filename, file_queue_node *current)
     if (!op.file_with_matches) {
         while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
             // Print colorized line number.
-            if (match_line->context == CONTEXT_NONE) {
-                printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
-            } else {
-                printf("%s%d%s-", CONTEXT_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+            switch (match_line->context) {
+                case CONTEXT_NONE:
+                    printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+                    break;
+                case CONTEXT_BEFORE:
+                    printf("%s%d%s-", CONTEXT_BEFORE_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+                    break;
+                case CONTEXT_AFTER:
+                    printf("%s%d%s-", CONTEXT_AFTER_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+                    break;
             }
 
             if (current->t == FILE_TYPE_UTF8) {
