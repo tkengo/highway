@@ -7,9 +7,9 @@
 #include "file.h"
 #include "color.h"
 #include "util.h"
+#include "line_list.h"
 #include "oniguruma.h"
 
-#define is_utf8_lead_byte(p) (((p) & 0xC0) != 0x80)
 #define APPEND_DOT(t) strcat((t), OMIT_COLOR);\
                       strcat((t), "....");\
                       strcat((t), RESET_COLOR)
@@ -17,7 +17,6 @@
 
 static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
-
 static int *gbetap[AVAILABLE_ENCODING_COUNT] = { 0 };
 
 char *reverse_char(const char *buf, char c, size_t n)
@@ -210,7 +209,7 @@ int format_line(const char *line,
                 enum file_type t,
                 int line_no,
                 match *first_match,
-                matched_line_queue *match_line,
+                match_line_list *match_line,
                 int thread_no)
 {
     int n = 10;
@@ -233,7 +232,7 @@ int format_line(const char *line,
     }
 
     int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
-    matched_line_queue_node *node = (matched_line_queue_node *)tc_malloc(sizeof(matched_line_queue_node));
+    match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
     node->line_no = line_no;
     node->line = (char *)tc_calloc(buffer_len, SIZE_OF_CHAR);
 
@@ -282,7 +281,7 @@ int format_line(const char *line,
     } else {
         strncat(node->line, s, line_len - last_end);
     }
-    enqueue_matched_line(match_line, node);
+    enqueue_match_line(match_line, node);
 
     return match_count;
 }
@@ -295,7 +294,7 @@ int search(int fd,
            const char *pattern,
            int pattern_len,
            enum file_type t,
-           matched_line_queue *match_line,
+           match_line_list *match_line,
            int thread_no)
 {
     char eol = '\n';

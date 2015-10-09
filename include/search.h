@@ -16,11 +16,12 @@ typedef struct _match {
 } match;
 
 #include "file.h"
-#include "queue.h"
+#include "file_queue.h"
 #include "option.h"
+#include "line_list.h"
 
 void generate_bad_character_table(const char *pattern, enum file_type t);
-int search(int fd, const char *pattern, int pattern_len, enum file_type t, matched_line_queue *match_line, int thread_no);
+int search(int fd, const char *pattern, int pattern_len, enum file_type t, match_line_list *match_line, int thread_no);
 int search_stream(const char *pattern);
 void free_fjs();
 

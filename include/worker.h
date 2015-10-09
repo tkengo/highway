@@ -2,7 +2,7 @@
 #define _HW_WORKER_H_
 
 #include "common.h"
-#include "queue.h"
+#include "file_queue.h"
 #include "option.h"
 
 typedef struct _worker_params {

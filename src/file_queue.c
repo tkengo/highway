@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <gperftools/tcmalloc.h>
-#include "queue.h"
+#include "file_queue.h"
 
 file_queue *create_file_queue()
 {
@@ -71,53 +71,6 @@ void free_file_queue(file_queue *queue)
     file_queue_node *node = queue->first;
     while (node) {
         file_queue_node *next = node->next;
-        tc_free(node);
-        node = next;
-    }
-
-    tc_free(queue);
-}
-
-matched_line_queue *create_matched_line_queue()
-{
-    matched_line_queue *queue = (matched_line_queue *)tc_malloc(sizeof(matched_line_queue));
-    queue->first = NULL;
-    queue->last  = NULL;
-    return queue;
-}
-
-matched_line_queue_node *enqueue_matched_line(matched_line_queue *queue, matched_line_queue_node *node)
-{
-    node->next = NULL;
-
-    if (queue->first) {
-        queue->last->next = node;
-        queue->last = node;
-    } else {
-        queue->first = node;
-        queue->last  = node;
-    }
-
-    return node;
-}
-
-matched_line_queue_node *dequeue_matched_line(matched_line_queue *queue)
-{
-    if (queue->first) {
-        matched_line_queue_node *first = queue->first;
-        queue->first = first->next;
-        return first;
-    } else {
-        return NULL;
-    }
-}
-
-void free_matched_line_queue(matched_line_queue *queue)
-{
-    matched_line_queue_node *node = queue->first;
-    while (node) {
-        matched_line_queue_node *next = node->next;
-        tc_free(node->line);
         tc_free(node);
         node = next;
     }

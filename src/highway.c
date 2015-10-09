@@ -9,7 +9,7 @@
 #include "highway.h"
 #include "option.h"
 #include "file.h"
-#include "queue.h"
+#include "file_queue.h"
 #include "log.h"
 #include "search.h"
 #include "worker.h"
@@ -158,7 +158,7 @@ int process_by_terminal()
 
 int process_by_redirection()
 {
-    matched_line_queue *match_line = create_matched_line_queue();
+    match_line_list *match_line = create_match_line_list();
     int match_count = search(STDIN_FILENO, op.pattern, strlen(op.pattern), FILE_TYPE_UTF8, match_line, 0);
 
     if (match_count > 0) {

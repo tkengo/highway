@@ -9,6 +9,7 @@
 #include "log.h"
 #include "util.h"
 #include "color.h"
+#include "line_list.h"
 
 pthread_mutex_t file_mutex;
 pthread_mutex_t print_mutex;
@@ -50,12 +51,12 @@ void destroy_mutex()
 
 void print_to_terminal(const char *filename, file_queue_node *current)
 {
-    matched_line_queue_node *match_line;
+    match_line_node *match_line;
     printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
 
     // If `file_with_matches` option is available, match results don't print on console.
     if (!op.file_with_matches) {
-        while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
+        while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
             // Print colorized line number.
             printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
 
@@ -80,13 +81,13 @@ void print_to_terminal(const char *filename, file_queue_node *current)
 
 void print_redirection(const char *filename, file_queue_node *current)
 {
-    matched_line_queue_node *match_line;
+    match_line_node *match_line;
 
     if (op.file_with_matches) {
         // If `file_with_matches` option is available, we print only filenames.
         printf("%s\n", filename);
     } else {
-        while ((match_line = dequeue_matched_line(current->match_lines)) != NULL) {
+        while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
             printf("%s:%d:", filename, match_line->line_no);
 
             if (current->t == FILE_TYPE_UTF8) {
@@ -148,7 +149,7 @@ void *print_worker(void *arg)
                 print_to_terminal(filename, current);
             }
 
-            free_matched_line_queue(current->match_lines);
+            free_match_line_list(current->match_lines);
         }
     }
 
@@ -206,7 +207,7 @@ void *search_worker(void *arg)
 
             // Searching.
             int actual_match_count = 0;
-            matched_line_queue *match_line = create_matched_line_queue();
+            match_line_list *match_line = create_match_line_list();
             int match_count = search(fd, pattern, pattern_len, t, match_line, params->index);
 
             if (match_count > 0) {
@@ -218,7 +219,7 @@ void *search_worker(void *arg)
                 current->t            = t;
             } else {
                 // If the pattern was not matched, the lines queue is no longer needed, so do free.
-                free_matched_line_queue(match_line);
+                free_match_line_list(match_line);
             }
         }
 

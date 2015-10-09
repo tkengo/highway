@@ -15,7 +15,7 @@ enum file_type {
     FILE_TYPE_UTF8
 };
 
-#include "queue.h"
+#include "file_queue.h"
 
 enum file_type detect_type_type(int fd);
 bool is_skip_entry(const struct dirent *entry);
