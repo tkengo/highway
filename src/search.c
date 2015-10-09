@@ -234,6 +234,7 @@ int format_line(const char *line,
     int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
     match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
     node->line_no = line_no;
+    node->context = CONTEXT_NONE;
     node->line = (char *)tc_calloc(buffer_len, SIZE_OF_CHAR);
 
     const char *s = line;
@@ -286,6 +287,46 @@ int format_line(const char *line,
     return match_count;
 }
 
+void before_context(const char *buf,
+                    const char *line_head,
+                    const char *last_match_line_end_pos,
+                    int line_no,
+                    match_line_list *match_lines,
+                    char eol)
+{
+    const char *lines[op.before + 1];
+    lines[0] = line_head;
+
+    int before_count = 0;
+    for (int i = 0; i < op.before; i++) {
+        if (lines[i] == buf || last_match_line_end_pos == lines[i] - 1) {
+            break;
+        }
+
+        const char *p = reverse_char(buf, eol, lines[i] - buf - 1);
+        if (p == NULL) {
+            p = buf;
+        } else {
+            ++p;
+        }
+
+        lines[i + 1] = p;
+        before_count++;
+    }
+
+    for (int i = before_count; i > 0; i--) {
+        int line_len = lines[i - 1] - lines[i] - 1;
+
+        match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
+        node->line_no = line_no - i;
+        node->context = CONTEXT_BEFORE;
+        node->line = (char *)tc_calloc(line_len + 1, SIZE_OF_CHAR);
+
+        strncat(node->line, lines[i], line_len);
+        enqueue_match_line(match_lines, node);
+    }
+}
+
 /**
  * Search the pattern from the file descriptor and add formatted matched lines to the queue if the
  * pattern was matched on the read buffer.
@@ -329,6 +370,7 @@ do_search:
 
         size_t search_len = last_line_end == NULL ? read_sum : last_line_end - buf;
         size_t org_search_len = search_len;
+        char *last_match_line_end_pos = NULL;
         char *p = buf;
 
         // Search the first pattern in the buffer.
@@ -343,12 +385,21 @@ do_search:
             // Count lines.
             last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count, eol);
 
+            if (match_count > 0 && op.after > 0) {
+            }
+
+            // Show before context.
+            if (op.before > 0) {
+                before_context(buf, line_head, last_match_line_end_pos, line_count, match_line, eol);
+            }
+
             m.start -= line_head - p;
             m.end    = m.start + plen;
             match_count += format_line(line_head, line_len, pattern, plen, t, line_count, &m, match_line, thread_no);
 
             search_len -= line_end - p + 1;
             p = line_end + 1;
+            last_match_line_end_pos = line_end;
         }
 
         last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);

@@ -4,9 +4,16 @@
 typedef struct _match_line_list match_line_list;
 typedef struct _match_line_node match_line_node;
 
+enum context_type {
+    CONTEXT_NONE = 0,
+    CONTEXT_BEFORE,
+    CONTEXT_AFTER
+};
+
 struct _match_line_node {
     char *line;
     int line_no;
+    enum context_type context;
     match_line_node *next;
 };
 

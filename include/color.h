@@ -3,8 +3,8 @@
 
 #define ERROR_COLOR "\033[31m"
 #define FILENAME_COLOR "\033[32;1m"
-#define YELLOW_COLOR "\033[33m"
 #define LINE_NO_COLOR "\033[1m"
+#define CONTEXT_LINE_NO_COLOR "\033[33m"
 #define OMIT_COLOR "\033[31m"
 #define MATCH_WORD_COLOR "\033[31m"
 #define RESET_COLOR "\033[39;49;0m"

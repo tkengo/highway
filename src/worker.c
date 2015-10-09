@@ -58,7 +58,11 @@ void print_to_terminal(const char *filename, file_queue_node *current)
     if (!op.file_with_matches) {
         while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
             // Print colorized line number.
-            printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+            if (match_line->context == CONTEXT_NONE) {
+                printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+            } else {
+                printf("%s%d%s-", CONTEXT_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+            }
 
             if (current->t == FILE_TYPE_UTF8) {
                 printf("%s", match_line->line);
@@ -88,7 +92,11 @@ void print_redirection(const char *filename, file_queue_node *current)
         printf("%s\n", filename);
     } else {
         while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
-            printf("%s:%d:", filename, match_line->line_no);
+            if (match_line->context == CONTEXT_NONE) {
+                printf("%s:%d:", filename, match_line->line_no);
+            } else {
+                printf("%s:%d-", filename, match_line->line_no);
+            }
 
             if (current->t == FILE_TYPE_UTF8) {
                 printf("%s", match_line->line);
