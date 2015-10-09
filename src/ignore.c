@@ -45,7 +45,7 @@ void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int dep
         // If a pattern was matched above condition, it represents the "extention". For instance:
         // *.c, *.cpp, *.h, and so on...
         strcpy(node->name, pattern + 2);
-        first = &hash->ext[node->name[0]];
+        first = &hash->ext[(unsigned char)node->name[0]];
     } else if (strpbrk(pattern, "?*[]") != NULL || (!node->is_root && !node->is_no_dir)) {
         // This is handled as a glob format, so fnmatch is used in matching test. For instance:
         // test*, src/test.c, and so on ...
@@ -57,7 +57,7 @@ void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int dep
         } else {
             strcpy(node->name, pattern);
         }
-        first = &hash->path[node->name[0]];
+        first = &hash->path[(unsigned char)node->name[0]];
     }
 
     node->next = *first;
@@ -141,7 +141,7 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
     char *ext = rindex(path, '.');
     if (ext && ext[1] != '\0') {
         ext++;
-        node = hash->ext[ext[0]];
+        node = hash->ext[(unsigned char)ext[0]];
         while (node) {
             if (strcmp(ext, node->name) == 0) {
                 return true;
@@ -150,7 +150,7 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
         }
     }
 
-    node = hash->path[path[0]];
+    node = hash->path[(unsigned char)path[0]];
     while (node) {
         bool is_skip = (node->is_dir && !is_directory(entry)) ||
                        !node->is_root;
@@ -165,7 +165,7 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
         node = node->next;
     }
 
-    node = hash->path[entry->d_name[0]];
+    node = hash->path[(unsigned char)entry->d_name[0]];
     while (node) {
         bool is_skip = (node->is_dir && !is_directory(entry)) ||
                        !node->is_no_dir ||
