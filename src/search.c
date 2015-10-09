@@ -294,11 +294,12 @@ void before_context(const char *buf,
                     match_line_list *match_lines,
                     char eol)
 {
-    const char *lines[op.before + 1];
+    int lim = MAX(op.context, op.before_context);
+    const char *lines[lim + 1];
     lines[0] = line_head;
 
     int before_count = 0;
-    for (int i = 0; i < op.before; i++) {
+    for (int i = 0; i < lim; i++) {
         if (lines[i] == buf || last_match_line_end_pos == lines[i]) {
             break;
         }
@@ -330,7 +331,8 @@ char *after_context(const char *line_head,
                     match_line_list *match_lines,
                     char eol)
 {
-    for (int i = 0; i < op.after; i++) {
+    int lim = MAX(op.context, op.after_context);
+    for (int i = 0; i < lim; i++) {
         if (line_head == last_line_end) {
             break;
         }
@@ -412,7 +414,7 @@ do_search:
 
             // Show after context.
             char *last_line_end_by_after = p;
-            if (match_count > 0 && op.after > 0) {
+            if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
                 last_line_end_by_after = after_context(line_head, p, p - buf, line_count, match_line, eol);
             }
 
@@ -420,7 +422,7 @@ do_search:
             last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count, eol);
 
             // Show before context.
-            if (op.before > 0) {
+            if (op.before_context > 0 || op.context > 0) {
                 before_context(buf, line_head, last_line_end_by_after, line_count, match_line, eol);
             }
 
@@ -432,7 +434,7 @@ do_search:
             p = line_end + 1;
         }
 
-        if (match_count > 0 && op.after > 0) {
+        if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
             after_context(NULL, p, p - buf, line_count, match_line, eol);
         }
         last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);

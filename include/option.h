@@ -12,8 +12,9 @@ typedef struct _hw_option {
     char *pattern;
     int worker;
     int omit_threshold;
-    int before;
-    int after;
+    int after_context;
+    int before_context;
+    int context;
     bool file_with_matches;
     bool use_regex;
     bool all_files;
