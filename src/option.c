@@ -151,5 +151,5 @@ void init_option(int argc, char **argv, hw_option *op)
 
 void free_option(hw_option *op)
 {
-    free(op->pattern);
+    tc_free(op->pattern);
 }

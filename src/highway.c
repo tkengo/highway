@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <gperftools/tcmalloc.h>
 #include "highway.h"
 #include "option.h"
 #include "file.h"
@@ -63,6 +64,7 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
         sprintf(base, "%s/", dir_path);
     }
 
+    bool need_free = false;
     if (!op.all_files) {
         sprintf(buf, "%s%s", base, ".gitignore");
         if (access(buf, F_OK) == 0) {
@@ -70,6 +72,7 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
             // not ignore file upper directories, otherwise the list will be inherited.
             if (ignores == NULL) {
                 ignores = load_ignore_hash(base, buf, depth);
+                need_free = true;
             } else {
                 ignores = merge_ignore_hash(ignores, base, buf, depth);
             }
@@ -109,6 +112,10 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
 
     if (!op.all_files && ignores != NULL) {
         free_ignore_hash(ignores, depth);
+
+        if (need_free) {
+            tc_free(ignores);
+        }
     }
 
     closedir(dir);

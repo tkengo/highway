@@ -191,7 +191,7 @@ ignore_node *free_ignore_hash_by_depth(ignore_node *node, int depth)
         }
         ignore_node *unnecessary = node;
         node = node->next;
-        free(unnecessary);
+        tc_free(unnecessary);
     }
     return node;
 }

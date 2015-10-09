@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <gperftools/tcmalloc.h>
 #include "common.h"
 #include "regex.h"
 #include "log.h"
@@ -24,7 +25,7 @@ bool onig_init_wrap()
         return false;
     }
 
-    reg = (regex_t **)calloc(op.worker, sizeof(regex_t *));
+    reg = (regex_t **)tc_calloc(op.worker, sizeof(regex_t *));
 
     return true;
 }
@@ -39,7 +40,7 @@ void onig_end_wrap()
             onig_free(reg[i]);
         }
     }
-    free(reg);
+    tc_free(reg);
 
     pthread_mutex_destroy(&onig_mutex);
     onig_end();

@@ -71,11 +71,11 @@ void free_file_queue(file_queue *queue)
     file_queue_node *node = queue->first;
     while (node) {
         file_queue_node *next = node->next;
-        free(node);
+        tc_free(node);
         node = next;
     }
 
-    free(queue);
+    tc_free(queue);
 }
 
 matched_line_queue *create_matched_line_queue()
@@ -117,10 +117,10 @@ void free_matched_line_queue(matched_line_queue *queue)
     matched_line_queue_node *node = queue->first;
     while (node) {
         matched_line_queue_node *next = node->next;
-        free(node->line);
-        free(node);
+        tc_free(node->line);
+        tc_free(node);
         node = next;
     }
 
-    free(queue);
+    tc_free(queue);
 }

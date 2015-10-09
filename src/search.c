@@ -72,7 +72,7 @@ void free_fjs()
 {
     for (int i = 0; i < AVAILABLE_ENCODING_COUNT; i++) {
         if (gbetap[i] != NULL) {
-            free(gbetap[i]);
+            tc_free(gbetap[i]);
         }
     }
 }
@@ -149,7 +149,7 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
         *cur_buf_size += N;
         new_buf = (char *)tc_calloc(*cur_buf_size, SIZE_OF_CHAR);
         memcpy(new_buf, copy_buf, need_size);
-        free(current_buf);
+        tc_free(current_buf);
     } else {
         new_buf = copy_buf;
     }
@@ -379,6 +379,6 @@ do_search:
         goto do_search;
     }
 
-    free(buf);
+    tc_free(buf);
     return match_count;
 }
