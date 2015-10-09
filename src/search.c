@@ -245,7 +245,7 @@ int format_line(const char *line,
         int plen = matches[i].end - matches[i].start;
         sum += prefix_len + plen;
 
-        if (!op.stdout_redirect && matches[i].start - old_end > op.omit_threshold) {
+        if (!op.stdout_redirect && !op.no_omit && matches[i].start - old_end > op.omit_threshold) {
             if (i == 0) {
                 int rest_len = op.omit_threshold - DOT_LENGTH;
                 APPEND_DOT(node->line);
@@ -276,7 +276,7 @@ int format_line(const char *line,
 
     int last_end = matches[match_count - 1].end;
     int suffix_len = line_len - last_end;
-    if (suffix_len > op.omit_threshold) {
+    if (!op.stdout_redirect && !op.no_omit && suffix_len > op.omit_threshold) {
         strncat(node->line, s, op.omit_threshold - DOT_LENGTH);
         APPEND_DOT(node->line);
     } else {
@@ -434,18 +434,19 @@ do_search:
             p = line_end + 1;
         }
 
+        // Show last after context.
         if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
             after_context(NULL, p, p - buf, line_count, match_line, eol);
         }
-        last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);
 
         if (read_len < N) {
             break;
         }
 
-        size_t rest = read_sum - org_search_len - 1;
-
+        last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);
         last_line_end++;
+
+        size_t rest = read_sum - org_search_len - 1;
         char *new_buf = grow_buf_if_shortage(&n, rest, 0, last_line_end, buf);
         if (new_buf == last_line_end) {
             new_buf = buf;
@@ -457,6 +458,8 @@ do_search:
         read_sum = rest;
     }
 
+    // If there is no new line in the file, we try to search again by '\r' from the head of the
+    // file. And also if there is no '\r' in the file, we will skip this file.
     if (!do_search && eol == '\n') {
         eol = '\r';
         read_sum = buf_offset = 0;
