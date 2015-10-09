@@ -8,7 +8,6 @@
 #include "ignore.h"
 #include "file.h"
 #include "util.h"
-#include "log.h"
 
 void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int depth)
 {

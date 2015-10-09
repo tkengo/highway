@@ -1,7 +1,7 @@
 #ifndef _HW_COMMON_H_
 #define _HW_COMMON_H_
 
-typedef int bool;
+typedef char bool;
 
 #define true 1
 #define false 0
