@@ -25,6 +25,8 @@ void usage()
     u("  -w, --word-regexp        Only match whole words.");
     u("");
     u("Output options:");
+    u("  -n, --line-number        Print line number with output lines.");
+    u("  -N, --no-line-number     Don't print line number.");
     u("      --no-omit            Show all characters even if too long lines were matched.");
     u("                           By default hw print only characters near by PATTERN if");
     u("                           the line was too long.");
