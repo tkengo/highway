@@ -9,6 +9,7 @@
 #include "highway.h"
 #include "option.h"
 #include "file.h"
+#include "fjs.h"
 #include "file_queue.h"
 #include "log.h"
 #include "search.h"
@@ -158,22 +159,39 @@ int process_by_terminal()
 
 int process_by_redirection()
 {
-    match_line_list *match_line = create_match_line_list();
-    int match_count = search(STDIN_FILENO, op.pattern, strlen(op.pattern), FILE_TYPE_UTF8, match_line, 0);
+    char *line = NULL;
+    char *pattern = op.pattern;
+    int pattern_len = strlen(op.pattern);
+    size_t linecapp = 0;
+    ssize_t line_len;
+    match m;
+    enum file_type t = FILE_TYPE_UTF8;
 
-    if (match_count > 0) {
-        char *filename = "stream";
-        file_queue_node dummy;
-        dummy.t           = FILE_TYPE_UTF8;
-        dummy.match_lines = match_line;
+    file_queue_node stream;
+    stream.t = t;
 
-        if (op.stdout_redirect) {
-            print_redirection(filename, &dummy);
-        } else {
-            print_to_terminal(filename, &dummy);
+    if (!op.use_regex) {
+        prepare_fjs(pattern, pattern_len, t);
+    }
+
+    while ((line_len = getline(&line, &linecapp, stdin)) > 0) {
+        if (search_by(line, line_len - 1, pattern, pattern_len, t, &m, 0)) {
+            match_line_list *match_line = create_match_line_list();
+
+            format_line(line, line_len - 1, pattern, pattern_len, t, 0, &m, match_line, 0);
+
+            stream.match_lines = match_line;
+            if (op.stdout_redirect) {
+                print_redirection(NULL, &stream);
+            } else {
+                print_to_terminal(NULL, &stream);
+            }
+
+            free_match_line_list(match_line);
         }
     }
 
+    free(line);
     return 0;
 }
 
@@ -195,11 +213,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
-
     if (op.stdin_redirect) {
+        setvbuf(stdout, NULL, _IONBF, 0);
         return_code = process_by_redirection();
     } else {
+        setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
         return_code = process_by_terminal();
     }
 

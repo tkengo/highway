@@ -90,7 +90,6 @@ void print_to_terminal(const char *filename, file_queue_node *current)
             }
             printf("\n");
         }
-        printf("\n");
     }
 }
 
@@ -172,6 +171,7 @@ void *print_worker(void *arg)
                 print_redirection(filename, current);
             } else {
                 print_to_terminal(filename, current);
+                printf("\n");
             }
 
             free_match_line_list(current->match_lines);
