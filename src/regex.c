@@ -82,3 +82,29 @@ regex_t *onig_new_wrap(const char *pattern, enum file_type t, bool ignore_case, 
 
     return reg[thread_no];
 }
+
+bool regex(const char *buf, size_t search_len, const char *pattern, enum file_type t, match *m, int thread_no)
+{
+    OnigRegion *region = onig_region_new();
+
+    // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
+    // but this wrapper method is implemented in thread safety.
+    regex_t *reg = onig_new_wrap(pattern, t, op.ignore_case, thread_no);
+    if (reg == NULL) {
+        return false;
+    }
+
+    bool res = false;
+    const unsigned char *p     = (unsigned char *)buf,
+                        *start = p,
+                        *end   = start + search_len,
+                        *range = end;
+    if (onig_search(reg, p, end, start, range, region, ONIG_OPTION_NONE) >= 0) {
+        m->start = region->beg[0];
+        m->end   = region->end[0];
+        res = true;
+    }
+
+    onig_region_free(region, 1);
+    return res;
+}

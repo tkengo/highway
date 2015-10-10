@@ -12,6 +12,7 @@ hw_SOURCES = \
 			 src/option.c \
 			 src/util.c \
 			 src/regex.c \
+			 src/fjs.c \
 			 src/help.c \
 			 vendor/onigmo/regcomp.c \
 			 vendor/onigmo/regenc.c \

@@ -5,6 +5,7 @@
 #include "search.h"
 #include "regex.h"
 #include "file.h"
+#include "fjs.h"
 #include "color.h"
 #include "util.h"
 #include "line_list.h"
@@ -14,117 +15,6 @@
                       strcat((t), "....");\
                       strcat((t), RESET_COLOR)
 #define DOT_LENGTH 4
-
-static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
-static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
-static int *gbetap[AVAILABLE_ENCODING_COUNT] = { 0 };
-
-char *reverse_char(const char *buf, char c, size_t n)
-{
-    if (n == 0) {
-        return NULL;
-    }
-
-    unsigned char *p = (unsigned char *)buf;
-    unsigned char uc = c;
-    while (--n != 0) {
-        if (buf[n] == uc) return (char *)buf + n;
-    }
-    return p[n] == uc ? (char *)p : NULL;
-}
-
-void prepare_fjs(const char *pattern, int pattern_len, enum file_type t)
-{
-    if (tbl_created[t]) {
-        return;
-    }
-
-    // Generate bad-character table.
-    int i, j, m = strlen(pattern);
-    const unsigned char *p = (unsigned char *)pattern;
-    for (i = 0; i < BAD_CHARACTER_TABLE_SIZE; ++i) {
-        tbl[t][i] = m + 1;
-    }
-    for (i = 0; i < m; ++i) {
-        tbl[t][p[i]] = m - i;
-    }
-
-    // Generate betap.
-    int *betap = gbetap[t] = (int *)tc_malloc(sizeof(int) * (pattern_len + 1));
-    i = 0;
-    j = betap[0] = -1;
-    while (i < m) {
-        while (j > -1 && p[i] != p[j]) {
-            j = betap[j];
-        }
-        if (p[++i] == p[++j]) {
-            betap[i] = betap[j];
-        } else {
-            betap[i] = j;
-        }
-    }
-
-    tbl_created[t] = true;
-}
-
-void free_fjs()
-{
-    for (int i = 0; i < AVAILABLE_ENCODING_COUNT; i++) {
-        if (gbetap[i] != NULL) {
-            tc_free(gbetap[i]);
-        }
-    }
-}
-
-bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, enum file_type t, match *mt)
-{
-    const unsigned char *p = (unsigned char *)pattern;
-    const unsigned char *x = (unsigned char *)buf;
-    int n = search_len, m = pattern_len;
-
-    if (m < 1) {
-        return false;
-    }
-
-    int *betap = gbetap[t];
-    int i = 0, j = 0, mp = m - 1, ip = mp;
-    while (ip < n) {
-        if (j <= 0) {
-            while (p[mp] != x[ip]) {
-                ip += tbl[t][x[ip + 1]];
-                if (ip >= n) return false;
-            }
-            j = 0;
-            i = ip - mp;
-            while (j < mp && x[i] == p[j]) {
-                i++; j++;
-            }
-            if (j == mp) {
-                mt->start = i - mp;
-                mt->end   = mt->start + m;
-                return true;
-            }
-            if (j <= 0) {
-                i++;
-            } else {
-                j = betap[j];
-            }
-        } else {
-            while (j < m && x[i] == p[j]) {
-                i++; j++;
-            }
-            if (j == m) {
-                mt->start = i - m;
-                mt->end   = mt->start + m;
-                return false;
-            }
-            j = betap[j];
-        }
-        ip = i + mp - j;
-    }
-
-    return false;
-}
 
 char *scan_newline(char *from, char *to, size_t *line_count, char eol)
 {
@@ -154,37 +44,6 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
     }
 
     return new_buf;
-}
-
-bool regex(const char *buf,
-          size_t search_len,
-          const char *pattern,
-          enum file_type t,
-          match *m,
-          int thread_no)
-{
-    OnigRegion *region = onig_region_new();
-
-    // Get the compiled regular expression. Actually, onig_new method is not safety multiple-thread,
-    // but this wrapper method is implemented in thread safety.
-    regex_t *reg = onig_new_wrap(pattern, t, op.ignore_case, thread_no);
-    if (reg == NULL) {
-        return false;
-    }
-
-    bool res = false;
-    const unsigned char *p     = (unsigned char *)buf,
-                        *start = p,
-                        *end   = start + search_len,
-                        *range = end;
-    if (onig_search(reg, p, end, start, range, region, ONIG_OPTION_NONE) >= 0) {
-        m->start = region->beg[0];
-        m->end   = region->end[0];
-        res = true;
-    }
-
-    onig_region_free(region, 1);
-    return res;
 }
 
 int search_by(const char *buf,
