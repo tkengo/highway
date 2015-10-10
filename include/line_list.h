@@ -20,6 +20,7 @@ struct _match_line_node {
 struct _match_line_list {
     match_line_node *first;
     match_line_node *last;
+    int max_line_no;
 };
 
 match_line_list *create_match_line_list();

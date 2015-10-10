@@ -188,9 +188,12 @@ char *after_context(const char *line_head,
                     int rest_len,
                     int line_no,
                     match_line_list *match_lines,
-                    char eol)
+                    char eol,
+                    int *count)
 {
     int lim = MAX(op.context, op.after_context);
+    *count = 0;
+
     for (int i = 0; i < lim; i++) {
         if (line_head == last_line_end) {
             break;
@@ -209,6 +212,7 @@ char *after_context(const char *line_head,
 
         strncat(node->line, last_line_end, line_len);
         enqueue_match_line(match_lines, node);
+        (*count)++;
 
         last_line_end = ++after_line;
     }
@@ -234,6 +238,7 @@ int search(int fd,
     size_t read_len;
     int buf_offset = 0;
     int match_count = 0;
+    int after_count;
     bool do_search = false;
     char *buf = (char *)tc_calloc(n, SIZE_OF_CHAR);
     char *last_new_line_scan_pos = buf;
@@ -269,12 +274,11 @@ do_search:
             char *line_head = reverse_char(p, eol, m.start);
             char *line_end  = memchr(p + m.start + plen, eol, rest_len);
             line_head = line_head == NULL ? p : line_head + 1;
-            int line_len = line_end - line_head;
 
             // Show after context.
             char *last_line_end_by_after = p;
             if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-                last_line_end_by_after = after_context(line_head, p, p - buf, line_count, match_line, eol);
+                last_line_end_by_after = after_context(line_head, p, p - buf, line_count, match_line, eol, &after_count);
             }
 
             // Count lines.
@@ -285,17 +289,22 @@ do_search:
                 before_context(buf, line_head, last_line_end_by_after, line_count, match_line, eol);
             }
 
+            // Search next pattern in the current line and format them in order to print.
             m.start -= line_head - p;
             m.end    = m.start + plen;
-            match_count += format_line(line_head, line_len, pattern, plen, t, line_count, &m, match_line, thread_no);
+            match_count += format_line(line_head, line_end - line_head, pattern, plen, t, line_count, &m, match_line, thread_no);
 
             search_len -= line_end - p + 1;
             p = line_end + 1;
         }
 
-        // Show last after context.
+        // Show last after context. And calculate max line number in this file in order to do
+        // padding line number on printing result.
         if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-            after_context(NULL, p, p - buf, line_count, match_line, eol);
+            after_context(NULL, p, p - buf, line_count, match_line, eol, &after_count);
+            match_line->max_line_no = line_count + after_count;
+        } else {
+            match_line->max_line_no = line_count;
         }
 
         if (read_len < N) {
