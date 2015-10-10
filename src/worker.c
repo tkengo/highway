@@ -52,7 +52,10 @@ void destroy_mutex()
 void print_to_terminal(const char *filename, file_queue_node *current)
 {
     match_line_node *match_line;
-    printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
+
+    if (!op.stdin_redirect) {
+        printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
+    }
 
     // If `file_with_matches` option is available, match results don't print on console.
     if (!op.file_with_matches) {
@@ -100,11 +103,15 @@ void print_redirection(const char *filename, file_queue_node *current)
         printf("%s\n", filename);
     } else {
         while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
+            if (!op.stdin_redirect) {
+                printf("%s:", filename);
+            }
+
             if (op.show_line_number) {
                 if (match_line->context == CONTEXT_NONE) {
-                    printf("%s:%d:", filename, match_line->line_no);
+                    printf("%d:", match_line->line_no);
                 } else {
-                    printf("%s:%d-", filename, match_line->line_no);
+                    printf("%d-", match_line->line_no);
                 }
             }
 
