@@ -57,17 +57,19 @@ void print_to_terminal(const char *filename, file_queue_node *current)
     // If `file_with_matches` option is available, match results don't print on console.
     if (!op.file_with_matches) {
         while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
-            // Print colorized line number.
-            switch (match_line->context) {
-                case CONTEXT_NONE:
-                    printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
-                    break;
-                case CONTEXT_BEFORE:
-                    printf("%s%d%s-", CONTEXT_BEFORE_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
-                    break;
-                case CONTEXT_AFTER:
-                    printf("%s%d%s-", CONTEXT_AFTER_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
-                    break;
+            // Print colorized line number if line-number option is available.
+            if (op.show_line_number) {
+                switch (match_line->context) {
+                    case CONTEXT_NONE:
+                        printf("%s%d%s:", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+                        break;
+                    case CONTEXT_BEFORE:
+                        printf("%s%d%s-", CONTEXT_BEFORE_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+                        break;
+                    case CONTEXT_AFTER:
+                        printf("%s%d%s-", CONTEXT_AFTER_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+                        break;
+                }
             }
 
             if (current->t == FILE_TYPE_UTF8) {
@@ -98,10 +100,12 @@ void print_redirection(const char *filename, file_queue_node *current)
         printf("%s\n", filename);
     } else {
         while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
-            if (match_line->context == CONTEXT_NONE) {
-                printf("%s:%d:", filename, match_line->line_no);
-            } else {
-                printf("%s:%d-", filename, match_line->line_no);
+            if (op.show_line_number) {
+                if (match_line->context == CONTEXT_NONE) {
+                    printf("%s:%d:", filename, match_line->line_no);
+                } else {
+                    printf("%s:%d-", filename, match_line->line_no);
+                }
             }
 
             if (current->t == FILE_TYPE_UTF8) {

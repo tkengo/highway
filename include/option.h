@@ -21,6 +21,7 @@ typedef struct _hw_option {
     bool no_omit;
     bool ignore_case;
     bool follow_link;
+    bool show_line_number;
     bool stdout_redirect;
     bool stdin_redirect;
 } hw_option;

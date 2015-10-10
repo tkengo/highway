@@ -25,10 +25,12 @@ void init_option(int argc, char **argv, hw_option *op)
         { "help",              no_argument,       NULL,  'h' },
         { "ignore-case",       no_argument,       NULL,  'i' },
         { "file-with-matches", no_argument,       NULL,  'l' },
+        { "line-number",       no_argument,       NULL,  'n' },
         { "word-regexp",       no_argument,       NULL,  'w' },
         { "after-context",     required_argument, NULL,  'A' },
         { "before-context",    required_argument, NULL,  'B' },
         { "context",           required_argument, NULL,  'C' },
+        { "no-line-number",    no_argument,       NULL,  'N' },
         { "debug",             no_argument,       &flag, 1   },
         { "worker",            required_argument, &flag, 2   },
         { "no-omit",           no_argument,       &flag, 3   },
@@ -53,10 +55,11 @@ void init_option(int argc, char **argv, hw_option *op)
     op->follow_link       = false;
     op->stdout_redirect   = IS_STDOUT_REDIRECT;
     op->stdin_redirect    = IS_STDIN_REDIRECT;
+    op->show_line_number  = !op->stdin_redirect;
 
     int ch;
     bool word_regex = false;
-    while ((ch = getopt_long(argc, argv, "aefhilwA:B:C:", longopts, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "aefhilnwA:B:C:N", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -98,6 +101,10 @@ void init_option(int argc, char **argv, hw_option *op)
                 op->file_with_matches = true;
                 break;
 
+            case 'n': /* Show line number */
+                op->show_line_number = true;
+                break;
+
             case 'w': /* Match only whole word */
                 word_regex = true;
                 break;
@@ -112,6 +119,10 @@ void init_option(int argc, char **argv, hw_option *op)
 
             case 'C': /* Context */
                 op->context = atoi(optarg);
+                break;
+
+            case 'N': /* Not show line number */
+                op->show_line_number = false;
                 break;
 
             case '?':
