@@ -11,20 +11,46 @@
 #include "line_list.h"
 #include "oniguruma.h"
 
+#define DOT_LENGTH 4
 #define APPEND_DOT(t) strcat((t), OMIT_COLOR);\
                       strcat((t), "....");\
                       strcat((t), RESET_COLOR)
-#define DOT_LENGTH 4
 
+/**
+ * Search backward from the end of the `n` bytes pointed to by `buf`. The buffer and target char is
+ * compared as unsigned char.
+ */
+char *reverse_char(const char *buf, char c, size_t n)
+{
+    if (n == 0) {
+        return NULL;
+    }
+
+    unsigned char *p = (unsigned char *)buf;
+    unsigned char uc = c;
+    while (--n != 0) {
+        if (buf[n] == uc) return (char *)buf + n;
+    }
+    return p[n] == uc ? (char *)p : NULL;
+}
+
+/**
+ * Scan the new line in the buffer from `from to `to`. Scaned new line count will be stored to the
+ * `line_count` pointer.
+ */
 char *scan_newline(char *from, char *to, size_t *line_count, char eol)
 {
     const char *start = from;
     while (start <= to && (start = memchr(start, eol, to - start + 1)) != NULL) {
+        // Found the new line. The `start` variable points to a new line position, so it is
+        // increments in order to search next line.
         start++;
+
+        // Also line count is incriments.
         (*line_count)++;
     }
-    from = to + 1;
-    return from;
+
+    return to + 1;
 }
 
 char *grow_buf_if_shortage(size_t *cur_buf_size,
@@ -61,6 +87,9 @@ int search_by(const char *buf,
     }
 }
 
+/**
+ * Search PATTERN from the line and format them.
+ */
 int format_line(const char *line,
                 int line_len,
                 const char *pattern,
@@ -71,13 +100,18 @@ int format_line(const char *line,
                 match_line_list *match_line,
                 int thread_no)
 {
+    // Create new match object default size. Maybe, in the most case, default size is very enough
+    // because the PATTERN is appeared in one line only less than 10 count.
     int n = 10;
+    match *matches = (match *)tc_malloc(sizeof(match) * n);
+
     int pos = 0, match_count = 1;
     int offset = first_match->end;
-    match *matches = (match *)tc_malloc(sizeof(match) * n);
     matches[0] = *first_match;
 
+    // Search the all of PATTERN in the line.
     while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, &matches[match_count], thread_no)) {
+        // Two times memory will be reallocated if match size is not enough.
         if (n <= match_count) {
             n *= 2;
             matches = (match *)realloc(matches, sizeof(match) * n);
@@ -98,11 +132,9 @@ int format_line(const char *line,
 
     const char *s = line;
     int old_end = 0;
-    int sum = 0;
     for (int i = 0; i < match_count; i++) {
         int prefix_len = matches[i].start - old_end;
         int plen = matches[i].end - matches[i].start;
-        sum += prefix_len + plen;
 
         if (!op.stdout_redirect && !op.no_omit && matches[i].start - old_end > op.omit_threshold) {
             if (i == 0) {

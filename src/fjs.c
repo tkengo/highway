@@ -6,20 +6,6 @@ static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
 static int *gbetap[AVAILABLE_ENCODING_COUNT] = { 0 };
 
-char *reverse_char(const char *buf, char c, size_t n)
-{
-    if (n == 0) {
-        return NULL;
-    }
-
-    unsigned char *p = (unsigned char *)buf;
-    unsigned char uc = c;
-    while (--n != 0) {
-        if (buf[n] == uc) return (char *)buf + n;
-    }
-    return p[n] == uc ? (char *)p : NULL;
-}
-
 void prepare_fjs(const char *pattern, int pattern_len, enum file_type t)
 {
     if (tbl_created[t]) {
@@ -63,15 +49,19 @@ void free_fjs()
     }
 }
 
+/**
+ * A simple fast hybrid pattern-matching algorithm. The algorithm is proposed in
+ * http://www.sciencedirect.com/science/article/pii/S1570866706001067
+ */
 bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, enum file_type t, match *mt)
 {
+    if (pattern_len < 1) {
+        return false;
+    }
+
     const unsigned char *p = (unsigned char *)pattern;
     const unsigned char *x = (unsigned char *)buf;
     int n = search_len, m = pattern_len;
-
-    if (m < 1) {
-        return false;
-    }
 
     int *betap = gbetap[t];
     int i = 0, j = 0, mp = m - 1, ip = mp;
