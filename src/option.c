@@ -48,6 +48,7 @@ void init_option(int argc, char **argv, hw_option *op)
     op->before_context    = 0;
     op->context           = 0;
     op->file_with_matches = false;
+    op->word_regex        = false;
     op->use_regex         = false;
     op->all_files         = false;
     op->no_omit           = false;
@@ -58,7 +59,6 @@ void init_option(int argc, char **argv, hw_option *op)
     op->show_line_number  = !op->stdin_redirect;
 
     int ch;
-    bool word_regex = false;
     while ((ch = getopt_long(argc, argv, "aefhilnwA:B:C:N", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
@@ -106,7 +106,7 @@ void init_option(int argc, char **argv, hw_option *op)
                 break;
 
             case 'w': /* Match only whole word */
-                word_regex = true;
+                op->word_regex = true;
                 break;
 
             case 'A': /* After context */
@@ -138,14 +138,8 @@ void init_option(int argc, char **argv, hw_option *op)
     }
 
     char *pattern = argv[optind++];
-    if (word_regex) {
-        op->pattern = (char *)tc_malloc(SIZE_OF_CHAR * (strlen(pattern) + 5));
-        sprintf(op->pattern, "\\b%s\\b", pattern);
-        op->use_regex = true;
-    } else {
-        op->pattern = (char *)tc_malloc(SIZE_OF_CHAR * (strlen(pattern) + 1));
-        strcpy(op->pattern, pattern);
-    }
+    op->pattern = (char *)tc_malloc(SIZE_OF_CHAR * (strlen(pattern) + 1));
+    strcpy(op->pattern, pattern);
 
     int paths_count = argc - optind;
     if (paths_count > MAX_PATHS_COUNT) {

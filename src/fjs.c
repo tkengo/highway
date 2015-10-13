@@ -1,6 +1,8 @@
 #include <string.h>
 #include <gperftools/tcmalloc.h>
 #include "fjs.h"
+#include "search.h"
+#include "util.h"
 
 static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };
@@ -55,7 +57,7 @@ void free_fjs()
  */
 bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, enum file_type t, match *mt)
 {
-    if (pattern_len < 1) {
+    if (pattern_len < 1 || search_len < pattern_len) {
         return false;
     }
 
@@ -79,7 +81,14 @@ bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, 
             if (j == mp) {
                 mt->start = i - mp;
                 mt->end   = mt->start + m;
-                return true;
+
+                if (op.word_regex) {
+                    if (is_word_match(buf, search_len, mt)) {
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
             }
             if (j <= 0) {
                 i++;
@@ -93,7 +102,14 @@ bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, 
             if (j == m) {
                 mt->start = i - m;
                 mt->end   = mt->start + m;
-                return false;
+
+                if (op.word_regex) {
+                    if (is_word_match(buf, search_len, mt)) {
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
             }
             j = betap[j];
         }

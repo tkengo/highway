@@ -95,14 +95,26 @@ bool regex(const char *buf, size_t search_len, const char *pattern, enum file_ty
     }
 
     bool res = false;
-    const unsigned char *p     = (unsigned char *)buf,
-                        *start = p,
-                        *end   = start + search_len,
-                        *range = end;
-    if (onig_search(reg, p, end, start, range, region, ONIG_OPTION_NONE) >= 0) {
-        m->start = region->beg[0];
-        m->end   = region->end[0];
-        res = true;
+    size_t offset = 0;
+
+    while (1) {
+        const unsigned char *p = (unsigned char *)buf + offset,
+                            *start = p,
+                            *end   = start + search_len - offset,
+                            *range = end;
+        if (onig_search(reg, p, end, start, range, region, ONIG_OPTION_NONE) >= 0) {
+            m->start = region->beg[0] + offset;
+            m->end   = region->end[0] + offset;
+
+            if (op.word_regex && !is_word_match(buf, search_len, m)) {
+                offset = m->end + 1;
+            } else {
+                res = true;
+                break;
+            }
+        } else {
+            break;
+        }
     }
 
     onig_region_free(region, 1);

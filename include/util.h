@@ -7,6 +7,7 @@
 #define IS_STDIN_REDIRECT (!isatty(STDIN_FILENO))
 #define IS_STDOUT_REDIRECT (!isatty(STDOUT_FILENO))
 
+bool is_word_sp(char c);
 char *trim(char *str);
 void init_iconv();
 void close_iconv();

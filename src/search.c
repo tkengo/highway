@@ -16,6 +16,12 @@
                       strcat((t), "....");\
                       strcat((t), RESET_COLOR)
 
+bool is_word_match(const char *buf, int len, match *m)
+{
+    return (m->start == 0       || is_word_sp(buf[m->start - 1])) &&
+           (m->end   == len - 1 || is_word_sp(buf[m->end      ]));
+}
+
 /**
  * Search backward from the end of the `n` bytes pointed to by `buf`. The buffer and target char is
  * compared as unsigned char.

@@ -16,6 +16,7 @@ typedef struct _hw_option {
     int before_context;
     int context;
     bool file_with_matches;
+    bool word_regex;
     bool use_regex;
     bool all_files;
     bool no_omit;
