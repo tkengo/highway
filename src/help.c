@@ -37,4 +37,5 @@ void usage()
     u("  -C, --context NUM        Print NUM lines before and after matches.");
     u("");
     u("  -h, --help               Show options help and some concept guides.");
+    u("      --version            Show version.");
 }

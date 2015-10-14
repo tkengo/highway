@@ -5,6 +5,7 @@
 #include <gperftools/tcmalloc.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include "config.h"
 #include "common.h"
 #include "highway.h"
 #include "option.h"
@@ -34,6 +35,7 @@ void init_option(int argc, char **argv, hw_option *op)
         { "debug",             no_argument,       &flag, 1   },
         { "worker",            required_argument, &flag, 2   },
         { "no-omit",           no_argument,       &flag, 3   },
+        { "version",           no_argument,       &flag, 4   },
         { 0, 0, 0, 0 }
     };
 
@@ -59,7 +61,8 @@ void init_option(int argc, char **argv, hw_option *op)
     op->show_line_number  = !op->stdin_redirect;
 
     int ch;
-    while ((ch = getopt_long(argc, argv, "aefhilnwA:B:C:N", longopts, NULL)) != -1) {
+    bool show_version = false;
+    while ((ch = getopt_long(argc, argv, "aefhilnvwA:B:C:N", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -71,6 +74,9 @@ void init_option(int argc, char **argv, hw_option *op)
                         break;
                     case 3: /* --no-omit */
                         op->no_omit = true;
+                        break;
+                    case 4: /* --version */
+                        show_version = true;
                         break;
                 }
                 break;
@@ -130,6 +136,11 @@ void init_option(int argc, char **argv, hw_option *op)
                 usage();
                 exit(1);
         }
+    }
+
+    if (show_version) {
+        printf("highway version %s\n", PACKAGE_VERSION);
+        exit(0);
     }
 
     if (argc == optind) {

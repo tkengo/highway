@@ -201,12 +201,12 @@ int process_by_redirection()
 int main(int argc, char **argv)
 {
     int return_code = 0;
+    init_option(argc, argv, &op);
 
     if (!init_mutex()) {
         return 1;
     }
 
-    init_option(argc, argv, &op);
     init_iconv();
 
     if (op.use_regex && !onig_init_wrap()) {
