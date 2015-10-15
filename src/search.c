@@ -67,7 +67,7 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
 {
     char *new_buf;
     if (*cur_buf_size < need_size + buf_offset + N) {
-        *cur_buf_size += N;
+        *cur_buf_size += need_size + (N - need_size % N);
         new_buf = (char *)tc_calloc(*cur_buf_size, SIZE_OF_CHAR);
         memcpy(new_buf, copy_buf, need_size);
         tc_free(current_buf);
@@ -273,7 +273,7 @@ int search(int fd,
     size_t line_count = 0;
     size_t read_sum = 0;
     size_t n = N;
-    size_t read_len;
+    ssize_t read_len;
     int buf_offset = 0;
     int match_count = 0;
     int after_count;
@@ -366,7 +366,7 @@ do_search:
 
     // If there is no new line in the file, we try to search again by '\r' from the head of the
     // file. And also if there is no '\r' in the file, we will skip this file.
-    if (!do_search && eol == '\n') {
+    if (read_len > 0 && !do_search && eol == '\n') {
         eol = '\r';
         read_sum = buf_offset = 0;
         lseek(fd, 0, SEEK_SET);
