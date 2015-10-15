@@ -3,6 +3,7 @@
 #include <iconv.h>
 #include <unistd.h>
 #include "common.h"
+#include "util.h"
 
 static iconv_t euc_ic;
 static iconv_t sjis_ic;
@@ -42,6 +43,23 @@ static char word_sp[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
+
+/**
+ * Set the fd resource limit. This method is used because hw will open too many files while
+ * searching in very large directory, so it may occur an error when open(2), opendir(3), etc... was
+ * called if too many files was opened. To avoid that, we release the limit.
+ */
+bool set_fd_rlimit(rlim_t limit)
+{
+    struct rlimit r;
+    getrlimit(RLIMIT_NOFILE, &r);
+    if (limit < r.rlim_max) {
+        r.rlim_cur = limit;
+        return setrlimit(RLIMIT_NOFILE, &r) == 0;
+    }
+
+    return false;
+}
 
 /**
  * Check whether the passed character is a word separation character.

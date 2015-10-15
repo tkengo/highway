@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include <sys/resource.h>
 #include <gperftools/tcmalloc.h>
 #include "highway.h"
 #include "option.h"
@@ -21,8 +20,6 @@
 #include "regex.h"
 #include "color.h"
 #include "oniguruma.h"
-
-#define MAX_FD_NUM 4096
 
 static bool complete_finding_file = false;
 
@@ -138,7 +135,7 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
     return true;
 }
 
-int process_by_terminal()
+int process_terminal()
 {
     file_queue *queue = create_file_queue();
 
@@ -172,7 +169,7 @@ int process_by_terminal()
     return 0;
 }
 
-int process_by_redirection()
+int process_stdin()
 {
     char *line = NULL;
     char *pattern = op.pattern;
@@ -215,7 +212,6 @@ int process_by_redirection()
  */
 int main(int argc, char **argv)
 {
-    int return_code = 0;
     init_option(argc, argv, &op);
 
     if (!init_mutex()) {
@@ -228,19 +224,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    int return_code = 0;
     if (op.stdin_redirect) {
         setvbuf(stdout, NULL, _IONBF, 0);
-        return_code = process_by_redirection();
+        return_code = process_stdin();
     } else {
-        struct rlimit r;
-        getrlimit(RLIMIT_NOFILE, &r);
-        if (MAX_FD_NUM < r.rlim_max) {
-            r.rlim_cur = MAX_FD_NUM;
-            setrlimit(RLIMIT_NOFILE, &r);
-        }
-
+        set_fd_rlimit(MAX_FD_NUM);
         setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
-        return_code = process_by_terminal();
+        return_code = process_terminal();
     }
 
     destroy_mutex();

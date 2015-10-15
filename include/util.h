@@ -1,12 +1,16 @@
 #ifndef _HW_UTIL_H_
 #define _HW_UTIL_H_
 
+#include <sys/resource.h>
+#include "common.h"
+
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)
 #define MAX(a,b) ((a) > (b)) ? (a) : (b)
 
 #define IS_STDIN_REDIRECT (!isatty(STDIN_FILENO))
 #define IS_STDOUT_REDIRECT (!isatty(STDOUT_FILENO))
 
+bool set_fd_rlimit(rlim_t limit);
 bool is_word_sp(char c);
 char *trim(char *str);
 void init_iconv();
