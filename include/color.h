@@ -2,6 +2,7 @@
 #define _HW_COLOR_H_
 
 #define ERROR_COLOR "\033[31m"
+#define WARNING_COLOR "\033[33m"
 #define FILENAME_COLOR "\033[32;1m"
 #define LINE_NO_COLOR "\033[1m"
 #define CONTEXT_AFTER_LINE_NO_COLOR "\033[35m"

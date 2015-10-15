@@ -4,7 +4,9 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <gperftools/tcmalloc.h>
 #include "highway.h"
 #include "option.h"
@@ -19,6 +21,8 @@
 #include "regex.h"
 #include "color.h"
 #include "oniguruma.h"
+
+#define MAX_FD_NUM 4096
 
 static bool complete_finding_file = false;
 
@@ -50,18 +54,22 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
     // and then add the file to the queue if it is true.
     DIR *dir = opendir(dir_path);
     if (dir == NULL) {
-        if (access(dir_path, F_OK) == 0) {
-            struct stat st;
-            stat(dir_path, &st);
+        int opendir_errno = errno;
+        struct stat st;
+        if (stat(dir_path, &st) == 0) {
             if (S_ISDIR(st.st_mode)) {
-                log_buffered("Failed: '%s' can't be opend. You may want to search under the directory again.");
+                if (opendir_errno == EMFILE) {
+                    log_w("Too many open files (%s). You might want to increase fd limit by `ulimit -n N`.", dir_path);
+                } else {
+                    log_w("%s can't be opend (errno: %d). You might want to search under the directory again.", opendir_errno, dir_path);
+                }
                 return false;
             } else {
                 enqueue_file_exclusively(queue, dir_path);
                 return true;
             }
         } else {
-            log_e("'%s' can't be opened. Is there the directory or file on your current directory?", dir_path);
+            log_w("'%s' can't be opened. Is there the directory or file on your current directory?", dir_path);
             return false;
         }
     }
@@ -224,6 +232,13 @@ int main(int argc, char **argv)
         setvbuf(stdout, NULL, _IONBF, 0);
         return_code = process_by_redirection();
     } else {
+        struct rlimit r;
+        getrlimit(RLIMIT_NOFILE, &r);
+        if (MAX_FD_NUM < r.rlim_max) {
+            r.rlim_cur = MAX_FD_NUM;
+            setrlimit(RLIMIT_NOFILE, &r);
+        }
+
         setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
         return_code = process_by_terminal();
     }

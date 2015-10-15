@@ -23,6 +23,16 @@ void log_e(const char *fmt, ...)
     va_end(args);
 }
 
+void log_w(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    fprintf(stderr, "%sWarning%s: ", WARNING_COLOR, RESET_COLOR);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+}
+
 void log_d(const char *fmt, ...)
 {
     if (level > LOG_LEVEL_DEBUG) {
