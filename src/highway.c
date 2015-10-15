@@ -51,8 +51,15 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
     DIR *dir = opendir(dir_path);
     if (dir == NULL) {
         if (access(dir_path, F_OK) == 0) {
-            enqueue_file_exclusively(queue, dir_path);
-            return true;
+            struct stat st;
+            stat(dir_path, &st);
+            if (S_ISDIR(st.st_mode)) {
+                log_buffered("Failed: '%s' can't be opend. You may want to search under the directory again.");
+                return false;
+            } else {
+                enqueue_file_exclusively(queue, dir_path);
+                return true;
+            }
         } else {
             log_e("'%s' can't be opened. Is there the directory or file on your current directory?", dir_path);
             return false;
