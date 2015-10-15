@@ -72,9 +72,7 @@ ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *
     }
 
     if (hash == NULL) {
-        ignore_hash *new_hash = (ignore_hash *)tc_malloc(sizeof(ignore_hash));
-        new_hash->glob = NULL;
-        new_hash->accept = NULL;
+        ignore_hash *new_hash = (ignore_hash *)tc_calloc(1, sizeof(ignore_hash));
         hash = new_hash;
     }
 
