@@ -77,7 +77,7 @@ bool find_target_files(file_queue *queue, const char *dir_path, ignore_hash *ign
         sprintf(buf, "%s%s", base, ".gitignore");
         if (access(buf, F_OK) == 0) {
             // Create search ignore list from the .gitignore file. New list is created if there are
-            // not ignore file upper directories, otherwise the list will be inherited.
+            // not ignore file on upper directories, otherwise the list will be inherited.
             if (ignores == NULL) {
                 ignores = load_ignore_hash(base, buf, depth);
                 need_free = true;

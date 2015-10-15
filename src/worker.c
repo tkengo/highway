@@ -234,7 +234,6 @@ void *search_worker(void *arg)
             }
 
             // Searching.
-            int actual_match_count = 0;
             match_line_list *match_line = create_match_line_list();
             int match_count = search(fd, pattern, pattern_len, t, match_line, params->index);
 
@@ -251,7 +250,7 @@ void *search_worker(void *arg)
             }
         }
 
-        // Launch print worker.
+        // Wake up print worker.
         current->searched = true;
         pthread_cond_signal(&print_cond);
 
