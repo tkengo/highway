@@ -10,12 +10,18 @@ AM_INIT_AUTOMAKE([no-define foreign subdir-objects])
 # Checks for programs.
 AC_PROG_CC
 
+m4_include([ax_pthread.m4])
+AX_PTHREAD
+
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-liconv':
 AC_CHECK_LIB([iconv], [main])
 # FIXME: Replace `main' with a function in `-ltcmalloc':
 AC_CHECK_LIB([tcmalloc], [main])
-CFLAGS="-Wall -std=gnu99 -O2"
+
+LIBS="$PTHREAD_LIBS $LIBS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS -Wall -std=gnu99"
+CC="$PTHREAD_CC"
 
 # Checks for header files.
 AC_FUNC_ALLOCA
