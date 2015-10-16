@@ -14,10 +14,9 @@ m4_include([ax_pthread.m4])
 AX_PTHREAD
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-liconv':
-AC_CHECK_LIB([iconv], [main])
-# FIXME: Replace `main' with a function in `-ltcmalloc':
-AC_CHECK_LIB([tcmalloc], [main])
+AC_CHECK_LIB([iconv], [iconv])
+AC_CHECK_LIB([tcmalloc], [tc_malloc])
+AC_CHECK_LIB([m], [log10])
 
 LIBS="$PTHREAD_LIBS $LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS -Wall -std=gnu99"
