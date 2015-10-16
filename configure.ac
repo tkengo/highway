@@ -26,6 +26,7 @@ AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_CHECK_TYPES([ptrdiff_t])
+AC_CHECK_MEMBERS([struct dirent.d_namlen], , , [#include <dirent.h>])
 
 # Checks for library functions.
 AC_FUNC_REALLOC

@@ -132,9 +132,15 @@ enum file_type detect_type_type(int fd)
  */
 bool is_skip_entry(const struct dirent *entry)
 {
-    bool cur    = entry->d_namlen == 1 && entry->d_name[0] == '.';
-    bool up     = entry->d_namlen == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
-    bool hidden = entry->d_namlen  > 1 && entry->d_name[0] == '.' && !op.all_files;
+#ifdef HAVE_STRUCT_DIRENT_D_NAMLEN
+    size_t len = entry->d_namlen;
+#else
+    size_t len = strlen(entry->d_name);
+#endif
+
+    bool cur    = len == 1 && entry->d_name[0] == '.';
+    bool up     = len == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
+    bool hidden = len  > 1 && entry->d_name[0] == '.' && !op.all_files;
 
     return (is_directory(entry) && (cur || up)) || hidden;
 }
