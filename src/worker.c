@@ -174,7 +174,9 @@ void *print_worker(void *arg)
                 print_redirection(filename, current);
             } else {
                 print_to_terminal(filename, current);
-                printf("\n");
+                if (!op.file_with_matches) {
+                    fputs("\n", stdout);
+                }
             }
 
             free_match_line_list(current->match_lines);

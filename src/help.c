@@ -21,10 +21,10 @@ void usage()
     u("  -e                       Parse PATTERN as a regular expression.");
     u("  -f, --follow-link        Follow symlinks.");
     u("  -i, --ignore-case        Match case insensitively.");
-    u("  -l, --file-with-matches  Only print filenames that contain matches.");
     u("  -w, --word-regexp        Only match whole words.");
     u("");
     u("Output options:");
+    u("  -l, --file-with-matches  Only print filenames that contain matches.");
     u("  -n, --line-number        Print line number with output lines.");
     u("  -N, --no-line-number     Don't print line number.");
     u("      --no-omit            Show all characters even if too long lines were matched.");
@@ -32,9 +32,9 @@ void usage()
     u("                           the line was too long.");
     u("");
     u("Context control:");
-    u("  -A, --after-context NUM  Print NUM lines after match.");
-    u("  -B, --before-context NUM Print NUM lines before match.");
-    u("  -C, --context NUM        Print NUM lines before and after matches.");
+    u("  -A, --after-context=NUM  Print NUM lines after match.");
+    u("  -B, --before-context=NUM Print NUM lines before match.");
+    u("  -C, --context=NUM        Print NUM lines before and after matches.");
     u("");
     u("  -h, --help               Show options help and some concept guides.");
     u("      --version            Show version.");
