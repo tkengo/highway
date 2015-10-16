@@ -1,7 +1,7 @@
 /hw
 /tmp
 /sample
-/include/config.h
+/include/config.h*
 /include/stamp-h1
 /depcomp
 /Makefile
