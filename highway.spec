@@ -6,7 +6,7 @@ Source: https://github.com/tkengo/%{name}/archive/v%{version}.tar.gz
 License: MIT License
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 BuildRequires: autoconf, automake, gperftools-devel
-Requires: autoconf, automake, gperftools-devel
+Requires: gperftools-libs
 
 %description
 High performance source code search tool.
