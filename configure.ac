@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.59])
 AC_INIT([highway], [1.0.0], [embrace.ddd.flake.peace+highway@gmail.com])
 AC_CONFIG_SRCDIR([src/highway.c])
 AC_CONFIG_HEADERS([include/config.h])
