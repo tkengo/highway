@@ -17,7 +17,6 @@ hw_option op;
 
 void init_option(int argc, char **argv, hw_option *op)
 {
-    bool help = false;
     static int flag;
 
     static struct option longopts[] = {

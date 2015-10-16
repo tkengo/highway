@@ -111,7 +111,7 @@ int format_line(const char *line,
     int n = 10;
     match *matches = (match *)tc_malloc(sizeof(match) * n);
 
-    int pos = 0, match_count = 1;
+    int match_count = 1;
     int offset = first_match->end;
     matches[0] = *first_match;
 

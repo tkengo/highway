@@ -100,7 +100,6 @@ ignore_hash *load_ignore_hash(const char *base, const char *path, int depth)
 bool match_path(ignore_node *node, const char *path, const struct dirent *entry)
 {
     while (node) {
-        bool is_skip = (node->is_dir && !is_directory(entry));
         if (node->is_dir && !is_directory(entry)) {
             node = node->next;
             continue;
@@ -196,8 +195,6 @@ ignore_node *free_ignore_hash_by_depth(ignore_node *node, int depth)
 
 void free_ignore_hash(ignore_hash *hash, int depth)
 {
-    ignore_node *node;
-
     for (int i = 0; i < IGNORE_TABLE_SIZE; i++) {
         hash->ext[i] = free_ignore_hash_by_depth(hash->ext[i], depth);
     }
