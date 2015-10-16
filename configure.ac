@@ -27,7 +27,6 @@ AC_FUNC_ALLOCA
 AC_CHECK_HEADERS([fcntl.h inttypes.h locale.h malloc.h stddef.h stdint.h stdlib.h string.h strings.h sys/time.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_CHECK_TYPES([ptrdiff_t])
