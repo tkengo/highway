@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include "config.h"
 #include "scan.h"
 #include "hwmalloc.h"
 #include "worker.h"
