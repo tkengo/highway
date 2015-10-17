@@ -17,8 +17,6 @@ enum file_type {
 
 #include "file_queue.h"
 
-enum file_type detect_type_type(int fd);
-bool is_skip_entry(const struct dirent *entry);
-bool is_search_target(const struct dirent *entry);
+enum file_type detect_file_type(int fd);
 
 #endif // _HW_FILE_H_

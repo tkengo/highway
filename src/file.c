@@ -11,7 +11,7 @@
 /**
  * Check if the filename is a binary file.
  */
-enum file_type detect_type_type(int fd)
+enum file_type detect_file_type(int fd)
 {
     if (op.stdin_redirect) {
         return FILE_TYPE_UTF8;
@@ -123,33 +123,5 @@ enum file_type detect_type_type(int fd)
         return FILE_TYPE_SHIFT_JIS;
     } else {
         return FILE_TYPE_UTF8;
-    }
-}
-
-/**
- * Check if the directory entry is ignored by the highway. The directory is ignored if it is the
- * current directory or upper directory or hidden directory(started directory name with dot `.`).
- */
-bool is_skip_entry(const struct dirent *entry)
-{
-#ifdef HAVE_STRUCT_DIRENT_D_NAMLEN
-    size_t len = entry->d_namlen;
-#else
-    size_t len = strlen(entry->d_name);
-#endif
-
-    bool cur    = len == 1 && entry->d_name[0] == '.';
-    bool up     = len == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
-    bool hidden = len  > 1 && entry->d_name[0] == '.' && !op.all_files;
-
-    return (entry->d_type == DT_DIR && (cur || up)) || hidden;
-}
-
-bool is_search_target(const struct dirent *entry)
-{
-    if (op.follow_link) {
-        return entry->d_type == DT_REG || entry->d_type == DT_LNK;
-    } else {
-        return entry->d_type == DT_REG;
     }
 }

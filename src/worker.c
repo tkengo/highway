@@ -127,7 +127,7 @@ void *search_worker(void *arg)
         // Check file type of the target file, then if it is a binary, we skip it because the hw is
         // the software in order to search "source code", so searching binary files is not good.
         int fd = open(current->filename, O_RDONLY);
-        if (fd != -1 && (t = detect_type_type(fd)) != FILE_TYPE_BINARY) {
+        if (fd != -1 && (t = detect_file_type(fd)) != FILE_TYPE_BINARY) {
             char *pattern = op.pattern;
 
             // Convert the pattern to appropriate encoding if an encoding of the target file is
