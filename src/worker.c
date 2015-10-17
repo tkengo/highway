@@ -50,88 +50,108 @@ void destroy_mutex()
     pthread_cond_destroy(&print_cond);
 }
 
-void print_to_terminal(const char *filename, file_queue_node *current)
+void print_filename(const char *filename)
 {
-    match_line_node *match_line;
-
-    if (!op.stdin_redirect) {
-        printf("%s%s%s\n", FILENAME_COLOR, filename, RESET_COLOR);
+    if (op.color) {
+        printf("%s%s%s", FILENAME_COLOR, filename, RESET_COLOR);
+    } else {
+        fputs(filename, stdout);
     }
 
-    int max_digit = log10(current->match_lines->max_line_no) + 1;
-
-    // If `file_with_matches` option is available, match results don't print on console.
-    if (!op.file_with_matches) {
-        while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
-            // Print colorized line number if line-number option is available.
-            if (op.show_line_number) {
-                switch (match_line->context) {
-                    case CONTEXT_NONE:
-                        printf("%s%*d%s:", LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
-                        break;
-                    case CONTEXT_BEFORE:
-                        printf("%s%*d%s-", CONTEXT_BEFORE_LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
-                        break;
-                    case CONTEXT_AFTER:
-                        printf("%s%*d%s-", CONTEXT_AFTER_LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
-                        break;
-                }
-            }
-
-            if (current->t == FILE_TYPE_UTF8) {
-                printf("%s", match_line->line);
-            } else {
-                const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
-                char out[utf8_len_guess];
-                memset(out, 0, utf8_len_guess);
-                if (current->t == FILE_TYPE_EUC_JP) {
-                    to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
-                } else if (current->t == FILE_TYPE_SHIFT_JIS) {
-                    to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
-                }
-                printf("%s", out);
-            }
-            printf("\n");
-        }
+    if (op.group) {
+        putc('\n', stdout);
+    } else {
+        putc(':', stdout);
     }
 }
 
-void print_redirection(const char *filename, file_queue_node *current)
+void print_line_number(match_line_node *match_line, int max_digit)
 {
-    match_line_node *match_line;
-
-    if (op.file_with_matches) {
-        // If `file_with_matches` option is available, we print only filenames.
-        printf("%s\n", filename);
-    } else {
-        while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
-            if (!op.stdin_redirect) {
-                printf("%s:", filename);
-            }
-
-            if (op.show_line_number) {
-                if (match_line->context == CONTEXT_NONE) {
-                    printf("%d:", match_line->line_no);
+    if (op.color) {
+        // Print colorized line number.
+        switch (match_line->context) {
+            case CONTEXT_NONE:
+                if (op.group) {
+                    printf("%s%*d%s", LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
                 } else {
-                    printf("%d-", match_line->line_no);
+                    printf("%s%d%s", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
                 }
-            }
-
-            if (current->t == FILE_TYPE_UTF8) {
-                printf("%s", match_line->line);
-            } else {
-                const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
-                char out[utf8_len_guess];
-                memset(out, 0, utf8_len_guess);
-                if (current->t == FILE_TYPE_EUC_JP) {
-                    to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
-                } else if (current->t == FILE_TYPE_SHIFT_JIS) {
-                    to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
+                break;
+            case CONTEXT_BEFORE:
+                if (op.group) {
+                    printf("%s%*d%s", CONTEXT_BEFORE_LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
+                } else {
+                    printf("%s%d%s", CONTEXT_BEFORE_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
                 }
-                printf("%s", out);
-            }
-            printf("\n");
+                break;
+            case CONTEXT_AFTER:
+                if (op.group) {
+                    printf("%s%*d%s", CONTEXT_AFTER_LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
+                } else {
+                    printf("%s%d%s", CONTEXT_AFTER_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
+                }
+                break;
         }
+    } else {
+        // Print no-colorized line number.
+        if (op.group) {
+            printf("%*d", max_digit, match_line->line_no);
+        } else {
+            printf("%d", match_line->line_no);
+        }
+    }
+
+    switch (match_line->context) {
+        case CONTEXT_NONE:
+            putc(':', stdout);
+            break;
+        case CONTEXT_BEFORE:
+            putc('-', stdout);
+            break;
+        case CONTEXT_AFTER:
+            putc('-', stdout);
+            break;
+    }
+}
+
+void print_to_terminal(const char *filename, file_queue_node *current)
+{
+    if (!op.stdin_redirect && op.group) {
+        print_filename(filename);
+    }
+
+    // If `file_with_matches` option is available, match results don't print on console.
+    if (op.file_with_matches) {
+        return;
+    }
+
+    match_line_node *match_line;
+    int max_digit = log10(current->match_lines->max_line_no) + 1;
+
+    // Show all matched line on console in the current file.
+    while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
+        if (!op.group) {
+            print_filename(filename);
+        }
+
+        if (op.show_line_number) {
+            print_line_number(match_line, max_digit);
+        }
+
+        if (current->t == FILE_TYPE_UTF8) {
+            fputs(match_line->line, stdout);
+        } else {
+            const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
+            char out[utf8_len_guess];
+            memset(out, 0, utf8_len_guess);
+            if (current->t == FILE_TYPE_EUC_JP) {
+                to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
+            } else if (current->t == FILE_TYPE_SHIFT_JIS) {
+                to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
+            }
+            fputs(out, stdout);
+        }
+        putc('\n', stdout);
     }
 }
 
@@ -164,13 +184,11 @@ void *print_worker(void *arg)
         pthread_mutex_unlock(&print_mutex);
 
         if (current && current->matched) {
-            if (op.stdout_redirect) {
-                print_redirection(current->filename, current);
-            } else {
-                print_to_terminal(current->filename, current);
-                if (!op.file_with_matches) {
-                    fputs("\n", stdout);
-                }
+            print_to_terminal(current->filename, current);
+
+            // Insert new line to separate from previouse group if --group options is available.
+            if (!op.file_with_matches && op.group) {
+                fputs("\n", stdout);
             }
 
             free_match_line_list(current->match_lines);

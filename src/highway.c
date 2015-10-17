@@ -193,11 +193,7 @@ int process_stdin()
             format_line(line, line_len - 1, pattern, pattern_len, t, 0, &m, match_line, 0);
 
             stream.match_lines = match_line;
-            if (op.stdout_redirect) {
-                print_redirection(NULL, &stream);
-            } else {
-                print_to_terminal(NULL, &stream);
-            }
+            print_to_terminal(NULL, &stream);
 
             free_match_line_list(match_line);
         }

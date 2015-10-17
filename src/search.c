@@ -12,9 +12,9 @@
 #include "oniguruma.h"
 
 #define DOT_LENGTH 4
-#define APPEND_DOT(t) strcat((t), OMIT_COLOR);\
-                      strcat((t), "....");\
-                      strcat((t), RESET_COLOR)
+#define APPEND_DOT(c,t) if(c)strcat((t), OMIT_COLOR);\
+                             strcat((t), "....");\
+                        if(c)strcat((t), RESET_COLOR)
 
 bool is_word_match(const char *buf, int len, match *m)
 {
@@ -142,28 +142,28 @@ int format_line(const char *line,
         int prefix_len = matches[i].start - old_end;
         int plen = matches[i].end - matches[i].start;
 
-        if (!op.stdout_redirect && !op.no_omit && matches[i].start - old_end > op.omit_threshold) {
+        if (!op.no_omit && matches[i].start - old_end > op.omit_threshold) {
             if (i == 0) {
                 int rest_len = op.omit_threshold - DOT_LENGTH;
-                APPEND_DOT(node->line);
+                APPEND_DOT(op.color, node->line);
                 strncat(node->line, s + prefix_len - rest_len, rest_len);
             } else {
                 int rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
                 strncat(node->line, s, rest_len);
-                APPEND_DOT(node->line);
+                APPEND_DOT(op.color, node->line);
                 strncat(node->line, s + prefix_len - rest_len, rest_len);
             }
         } else {
             strncat(node->line, s, prefix_len);
         }
 
-        if (!op.stdout_redirect) {
+        if (op.color) {
             strcat(node->line, MATCH_WORD_COLOR);
         }
 
         strncat(node->line, s + prefix_len, plen);
 
-        if (!op.stdout_redirect) {
+        if (op.color) {
             strcat(node->line, RESET_COLOR);
         }
 
@@ -175,7 +175,7 @@ int format_line(const char *line,
     int suffix_len = line_len - last_end;
     if (!op.stdout_redirect && !op.no_omit && suffix_len > op.omit_threshold) {
         strncat(node->line, s, op.omit_threshold - DOT_LENGTH);
-        APPEND_DOT(node->line);
+        APPEND_DOT(op.color, node->line);
     } else {
         strncat(node->line, s, line_len - last_end);
     }

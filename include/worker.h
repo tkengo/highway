@@ -20,7 +20,6 @@ extern bool is_complete_finding_file();
 bool init_mutex();
 void destroy_mutex();
 void print_to_terminal(const char *filename, file_queue_node *current);
-void print_redirection(const char *filename, file_queue_node *current);
 void *print_worker(void *arg);
 void *search_worker(void *arg);
 

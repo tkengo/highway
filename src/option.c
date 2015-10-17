@@ -35,6 +35,10 @@ void init_option(int argc, char **argv, hw_option *op)
         { "worker",            required_argument, &flag, 2   },
         { "no-omit",           no_argument,       &flag, 3   },
         { "version",           no_argument,       &flag, 4   },
+        { "color",             no_argument,       &flag, 5   },
+        { "no-color",          no_argument,       &flag, 6   },
+        { "group",             no_argument,       &flag, 7   },
+        { "no-group",          no_argument,       &flag, 8   },
         { 0, 0, 0, 0 }
     };
 
@@ -58,6 +62,8 @@ void init_option(int argc, char **argv, hw_option *op)
     op->stdout_redirect   = IS_STDOUT_REDIRECT;
     op->stdin_redirect    = IS_STDIN_REDIRECT;
     op->show_line_number  = !op->stdin_redirect;
+    op->color             = !op->stdout_redirect;
+    op->group             = !op->stdout_redirect;
 
     int ch;
     bool show_version = false;
@@ -76,6 +82,18 @@ void init_option(int argc, char **argv, hw_option *op)
                         break;
                     case 4: /* --version */
                         show_version = true;
+                        break;
+                    case 5: /* --color */
+                        op->color = true;
+                        break;
+                    case 6: /* --no-color */
+                        op->color = false;
+                        break;
+                    case 7: /* --group */
+                        op->group = true;
+                        break;
+                    case 8: /* --no-group */
+                        op->group = false;
                         break;
                 }
                 break;

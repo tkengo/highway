@@ -23,6 +23,8 @@ typedef struct _hw_option {
     bool ignore_case;
     bool follow_link;
     bool show_line_number;
+    bool color;
+    bool group;
     bool stdout_redirect;
     bool stdin_redirect;
 } hw_option;
