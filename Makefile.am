@@ -7,6 +7,7 @@ hw_SOURCES = \
 			 src/line_list.c \
 			 src/worker.c \
 			 src/search.c \
+			 src/print.c \
 			 src/ignore.c \
 			 src/log.c \
 			 src/option.c \

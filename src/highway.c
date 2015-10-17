@@ -14,6 +14,7 @@
 #include "file_queue.h"
 #include "log.h"
 #include "search.h"
+#include "print.h"
 #include "worker.h"
 #include "ignore.h"
 #include "util.h"
@@ -193,7 +194,7 @@ int process_stdin()
             format_line(line, line_len - 1, pattern, pattern_len, t, 0, &m, match_line, 0);
 
             stream.match_lines = match_line;
-            print_to_terminal(NULL, &stream);
+            print_result(NULL, &stream);
 
             free_match_line_list(match_line);
         }
