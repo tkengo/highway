@@ -17,7 +17,6 @@ file_queue *create_file_queue()
 file_queue_node *enqueue_file(file_queue *queue, const char *filename)
 {
     file_queue_node *node = (file_queue_node *)tc_malloc(sizeof(file_queue_node));
-    node->id          = queue->total++;
     node->next        = NULL;
     node->match_lines = NULL;
     node->searched    = false;

@@ -13,7 +13,6 @@ typedef struct _file_queue_node file_queue_node;
 
 struct _file_queue_node {
     char filename[MAX_PATH_LENGTH];
-    int id;
     file_queue_node *next;
     match_line_list *match_lines;
     match *matches;
