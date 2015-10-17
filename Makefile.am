@@ -3,6 +3,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/vendor/onigmo
 hw_SOURCES = \
 			 src/highway.c \
 			 src/file.c \
+			 src/scan.c \
 			 src/file_queue.c \
 			 src/line_list.c \
 			 src/worker.c \
