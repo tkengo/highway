@@ -164,16 +164,10 @@ void *print_worker(void *arg)
         pthread_mutex_unlock(&print_mutex);
 
         if (current && current->matched) {
-            // Remove ./ from the filename in order to make easy to see.
-            char *filename = current->filename;
-            if (filename[0] == '.' && filename[1] == '/') {
-                filename += 2;
-            }
-
             if (op.stdout_redirect) {
-                print_redirection(filename, current);
+                print_redirection(current->filename, current);
             } else {
-                print_to_terminal(filename, current);
+                print_to_terminal(current->filename, current);
                 if (!op.file_with_matches) {
                     fputs("\n", stdout);
                 }
