@@ -103,7 +103,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
             }
         }
 
-        if (is_directory(entry)) {
+        if (entry->d_type == DT_DIR) {
             scan_target(queue, buf, ignores, depth + 1);
         } else if (is_search_target(entry)) {
             enqueue_file_exclusively(queue, buf);

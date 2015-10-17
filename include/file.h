@@ -19,7 +19,6 @@ enum file_type {
 
 enum file_type detect_type_type(int fd);
 bool is_skip_entry(const struct dirent *entry);
-bool is_directory(const struct dirent *entry);
 bool is_search_target(const struct dirent *entry);
 
 #endif // _HW_FILE_H_

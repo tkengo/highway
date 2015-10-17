@@ -142,12 +142,7 @@ bool is_skip_entry(const struct dirent *entry)
     bool up     = len == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool hidden = len  > 1 && entry->d_name[0] == '.' && !op.all_files;
 
-    return (is_directory(entry) && (cur || up)) || hidden;
-}
-
-bool is_directory(const struct dirent *entry)
-{
-    return entry->d_type == DT_DIR;
+    return (entry->d_type == DT_DIR && (cur || up)) || hidden;
 }
 
 bool is_search_target(const struct dirent *entry)
