@@ -1,27 +1,15 @@
 #include <stdio.h>
 #include <string.h>
-#include <dirent.h>
 #include <pthread.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/stat.h>
-#include <gperftools/tcmalloc.h>
 #include "highway.h"
 #include "scan.h"
 #include "option.h"
-#include "file.h"
 #include "fjs.h"
-#include "file_queue.h"
 #include "log.h"
-#include "search.h"
 #include "print.h"
 #include "worker.h"
-#include "ignore.h"
 #include "util.h"
 #include "regex.h"
-#include "color.h"
-#include "oniguruma.h"
 
 static bool complete_finding_file = false;
 
