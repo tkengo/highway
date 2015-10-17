@@ -2,6 +2,8 @@
 #include <string.h>
 #include <pthread.h>
 #include "highway.h"
+#include "hwmalloc.h"
+#include "worker.h"
 #include "scan.h"
 #include "option.h"
 #include "fjs.h"
@@ -47,7 +49,11 @@ int process_terminal()
         pthread_join(th[i], NULL);
     }
     pthread_join(pth, NULL);
-    free_file_queue(queue);
+
+    if (queue->last) {
+        tc_free(queue->last);
+    }
+    tc_free(queue);
 
     return 0;
 }
@@ -71,14 +77,14 @@ int process_stdin()
 
     while ((line_len = getline(&line, &linecapp, stdin)) > 0) {
         if (search_by(line, line_len - 1, pattern, pattern_len, t, &m, 0)) {
-            match_line_list *match_line = create_match_line_list();
+            match_line_list *match_lines = create_match_line_list();
 
-            format_line(line, line_len - 1, pattern, pattern_len, t, 0, &m, match_line, 0);
+            format_line(line, line_len - 1, pattern, pattern_len, t, 0, &m, match_lines, 0);
 
-            stream.match_lines = match_line;
+            stream.match_lines = match_lines;
             print_result(NULL, &stream);
 
-            free_match_line_list(match_line);
+            free_match_line_list(match_lines);
         }
     }
 

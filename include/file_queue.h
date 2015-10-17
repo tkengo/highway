@@ -14,8 +14,8 @@ typedef struct _file_queue_node file_queue_node;
 struct _file_queue_node {
     char filename[MAX_PATH_LENGTH];
     file_queue_node *next;
+    file_queue_node *prev;
     match_line_list *match_lines;
-    match *matches;
     bool searched;
     bool matched;
     enum file_type t;
@@ -25,14 +25,10 @@ struct _file_queue {
     file_queue_node *first;
     file_queue_node *last;
     file_queue_node *current_for_search;
-    file_queue_node *current_for_print;
-    int total;
 };
 
 file_queue *create_file_queue();
 file_queue_node *enqueue_file(file_queue *queue, const char *filename);
 file_queue_node *peek_file_for_search(file_queue *queue);
-file_queue_node *peek_file_for_print(file_queue *queue);
-void free_file_queue(file_queue *queue);
 
 #endif // _HW_FILE_QUEUE_H_

@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
-#include <gperftools/tcmalloc.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include "hwmalloc.h"
 #include "config.h"
 #include "common.h"
 #include "highway.h"

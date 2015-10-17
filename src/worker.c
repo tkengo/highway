@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <math.h>
 #include "worker.h"
+#include "hwmalloc.h"
 #include "print.h"
 #include "file.h"
 #include "log.h"
@@ -59,11 +60,16 @@ void *print_worker(void *arg)
     worker_params *params = (worker_params *)arg;
     file_queue *queue = params->queue;
 
+    pthread_mutex_lock(&print_mutex);
+    pthread_cond_wait(&print_cond, &print_mutex);
+    pthread_mutex_unlock(&print_mutex);
+
+    file_queue_node *current = queue->first;
+    file_queue_node *prev = current->prev;
     while (1) {
         // This worker takes out a print target file from the queue. If the queue is empty, worker
         // will be waiting until find at least one target print file.
         pthread_mutex_lock(&print_mutex);
-        file_queue_node *current = peek_file_for_print(queue);
         while (current == NULL || !current->searched) {
             // Break this loop if all files was searched.
             if (current == NULL && is_complete_finding_file()) {
@@ -74,12 +80,16 @@ void *print_worker(void *arg)
             pthread_cond_wait(&print_cond, &print_mutex);
 
             if (current == NULL) {
-                current = peek_file_for_print(queue);
+                current = prev->next;
             }
         }
         pthread_mutex_unlock(&print_mutex);
 
-        if (current && current->matched) {
+        if (current == NULL) {
+            continue;
+        }
+
+        if (current->matched) {
             print_result(current->filename, current);
 
             // Insert new line to separate from previouse group if --group options is available.
@@ -89,6 +99,16 @@ void *print_worker(void *arg)
 
             free_match_line_list(current->match_lines);
         }
+
+        // Current node is used on scaning target, so it should not release it's memory now.
+        // Therefore release memory of the previous node because it is no longer used in the
+        // future.
+        if (current->prev) {
+            tc_free(current->prev);
+        }
+
+        prev = current;
+        current = current->next;
     }
 
     return NULL;
@@ -144,19 +164,19 @@ void *search_worker(void *arg)
             }
 
             // Searching.
-            match_line_list *match_line = create_match_line_list();
-            int match_count = search(fd, pattern, pattern_len, t, match_line, params->index);
+            match_line_list *match_lines = create_match_line_list();
+            int match_count = search(fd, pattern, pattern_len, t, match_lines, params->index);
 
             if (match_count > 0) {
                 // Set additional data to the queue data because it will be used on print worker in
-                // order to print results to the console. `match_line` variable will be released
+                // order to print results to the console. `match_lines` variable will be released
                 // along with the file queue when it is released.
                 current->matched      = true;
-                current->match_lines  = match_line;
+                current->match_lines  = match_lines;
                 current->t            = t;
             } else {
                 // If the pattern was not matched, the lines queue is no longer needed, so do free.
-                free_match_line_list(match_line);
+                free_match_line_list(match_lines);
             }
         }
 

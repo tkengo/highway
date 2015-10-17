@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include <gperftools/tcmalloc.h>
 #include "scan.h"
+#include "hwmalloc.h"
 #include "worker.h"
 #include "log.h"
 

@@ -1,8 +1,8 @@
 #include <string.h>
-#include <gperftools/tcmalloc.h>
 #include "fjs.h"
 #include "search.h"
 #include "util.h"
+#include "hwmalloc.h"
 
 static char tbl[AVAILABLE_ENCODING_COUNT][BAD_CHARACTER_TABLE_SIZE];
 static bool tbl_created[AVAILABLE_ENCODING_COUNT] = { 0 };

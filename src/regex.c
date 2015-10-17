@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include <gperftools/tcmalloc.h>
 #include "common.h"
+#include "hwmalloc.h"
 #include "regex.h"
 #include "log.h"
 

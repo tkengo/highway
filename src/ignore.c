@@ -3,9 +3,9 @@
 #include <string.h>
 #include <dirent.h>
 #include <fnmatch.h>
-#include <gperftools/tcmalloc.h>
 #include "common.h"
 #include "ignore.h"
+#include "hwmalloc.h"
 #include "file.h"
 #include "util.h"
 

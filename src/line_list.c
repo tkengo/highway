@@ -1,5 +1,5 @@
-#include <gperftools/tcmalloc.h>
 #include "line_list.h"
+#include "hwmalloc.h"
 
 match_line_list *create_match_line_list()
 {
