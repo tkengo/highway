@@ -64,6 +64,10 @@ void *print_worker(void *arg)
     pthread_cond_wait(&print_cond, &print_mutex);
     pthread_mutex_unlock(&print_mutex);
 
+    if (queue->first == NULL) {
+        return NULL;
+    }
+
     file_queue_node *current = queue->first;
     file_queue_node *prev = current->prev;
     while (1) {
