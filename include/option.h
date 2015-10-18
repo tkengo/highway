@@ -31,7 +31,7 @@ typedef struct _hw_option {
 
 extern hw_option op;
 
-void init_option(int argc, char **argv, hw_option *op);
-void free_option(hw_option *op);
+void init_option(int argc, char **argv);
+void free_option();
 
 #endif // _HW_OPTION_H_

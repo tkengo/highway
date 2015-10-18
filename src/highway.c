@@ -48,6 +48,7 @@ int process_terminal()
     for (int i = 0; i < op.worker; i++) {
         pthread_join(th[i], NULL);
     }
+    pthread_cond_broadcast(&print_cond);
     pthread_join(pth, NULL);
 
     if (queue->last) {
@@ -97,7 +98,7 @@ int process_stdin()
  */
 int main(int argc, char **argv)
 {
-    init_option(argc, argv, &op);
+    init_option(argc, argv);
 
     if (!init_mutex()) {
         return 1;

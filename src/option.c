@@ -15,7 +15,7 @@
 
 hw_option op;
 
-void init_option(int argc, char **argv, hw_option *op)
+void init_option(int argc, char **argv)
 {
     static int flag;
 
@@ -45,25 +45,25 @@ void init_option(int argc, char **argv, hw_option *op)
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-    op->worker            = MAX(DEFAULT_WORKER, sysconf(_SC_NPROCESSORS_ONLN) - 1);
-    op->root_paths[0]     = ".";
-    op->paths_count       = 1;
-    op->omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);
-    op->after_context     = 0;
-    op->before_context    = 0;
-    op->context           = 0;
-    op->file_with_matches = false;
-    op->word_regex        = false;
-    op->use_regex         = false;
-    op->all_files         = false;
-    op->no_omit           = false;
-    op->ignore_case       = false;
-    op->follow_link       = false;
-    op->stdout_redirect   = IS_STDOUT_REDIRECT;
-    op->stdin_redirect    = IS_STDIN_REDIRECT;
-    op->show_line_number  = !op->stdin_redirect;
-    op->color             = !op->stdout_redirect;
-    op->group             = !op->stdout_redirect;
+    op.worker            = MAX(DEFAULT_WORKER, sysconf(_SC_NPROCESSORS_ONLN) - 1);
+    op.root_paths[0]     = ".";
+    op.paths_count       = 1;
+    op.omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);
+    op.after_context     = 0;
+    op.before_context    = 0;
+    op.context           = 0;
+    op.file_with_matches = false;
+    op.word_regex        = false;
+    op.use_regex         = false;
+    op.all_files         = false;
+    op.no_omit           = false;
+    op.ignore_case       = false;
+    op.follow_link       = false;
+    op.stdout_redirect   = IS_STDOUT_REDIRECT;
+    op.stdin_redirect    = IS_STDIN_REDIRECT;
+    op.show_line_number  = !op.stdin_redirect;
+    op.color             = !op.stdout_redirect;
+    op.group             = !op.stdout_redirect;
 
     int ch;
     bool show_version = false;
@@ -75,39 +75,39 @@ void init_option(int argc, char **argv, hw_option *op)
                         set_log_level(LOG_LEVEL_DEBUG);
                         break;
                     case 2: /* --worker */
-                        op->worker = atoi(optarg);
+                        op.worker = atoi(optarg);
                         break;
                     case 3: /* --no-omit */
-                        op->no_omit = true;
+                        op.no_omit = true;
                         break;
                     case 4: /* --version */
                         show_version = true;
                         break;
                     case 5: /* --color */
-                        op->color = true;
+                        op.color = true;
                         break;
                     case 6: /* --no-color */
-                        op->color = false;
+                        op.color = false;
                         break;
                     case 7: /* --group */
-                        op->group = true;
+                        op.group = true;
                         break;
                     case 8: /* --no-group */
-                        op->group = false;
+                        op.group = false;
                         break;
                 }
                 break;
 
             case 'a': /* All files searching */
-                op->all_files = true;
+                op.all_files = true;
                 break;
 
             case 'e': /* Use regular expression */
-                op->use_regex = true;
+                op.use_regex = true;
                 break;
 
             case 'f': /* Following symbolic link */
-                op->follow_link = true;
+                op.follow_link = true;
                 break;
 
             case 'h': /* Show help */
@@ -116,36 +116,36 @@ void init_option(int argc, char **argv, hw_option *op)
                 break;
 
             case 'i': /* Ignore case */
-                op->ignore_case = true;
-                op->use_regex   = true;
+                op.ignore_case = true;
+                op.use_regex   = true;
                 break;
 
             case 'l': /* Show only filenames */
-                op->file_with_matches = true;
+                op.file_with_matches = true;
                 break;
 
             case 'n': /* Show line number */
-                op->show_line_number = true;
+                op.show_line_number = true;
                 break;
 
             case 'w': /* Match only whole word */
-                op->word_regex = true;
+                op.word_regex = true;
                 break;
 
             case 'A': /* After context */
-                op->after_context = atoi(optarg);
+                op.after_context = atoi(optarg);
                 break;
 
             case 'B': /* Before context */
-                op->before_context = atoi(optarg);
+                op.before_context = atoi(optarg);
                 break;
 
             case 'C': /* Context */
-                op->context = atoi(optarg);
+                op.context = atoi(optarg);
                 break;
 
             case 'N': /* Not show line number */
-                op->show_line_number = false;
+                op.show_line_number = false;
                 break;
 
             case '?':
@@ -166,8 +166,8 @@ void init_option(int argc, char **argv, hw_option *op)
     }
 
     char *pattern = argv[optind++];
-    op->pattern = (char *)tc_malloc(SIZE_OF_CHAR * (strlen(pattern) + 1));
-    strcpy(op->pattern, pattern);
+    op.pattern = (char *)tc_malloc(SIZE_OF_CHAR * (strlen(pattern) + 1));
+    strcpy(op.pattern, pattern);
 
     int paths_count = argc - optind;
     if (paths_count > MAX_PATHS_COUNT) {
@@ -182,13 +182,13 @@ void init_option(int argc, char **argv, hw_option *op)
             if (path[len - 1] == '/') {
                 path[len - 1] = '\0';
             }
-            op->root_paths[i] = path;
+            op.root_paths[i] = path;
         }
-        op->paths_count = paths_count;
+        op.paths_count = paths_count;
     }
 }
 
-void free_option(hw_option *op)
+void free_option()
 {
-    tc_free(op->pattern);
+    tc_free(op.pattern);
 }
