@@ -84,7 +84,7 @@ int process_stdin()
             format_line(line, line_len - 1, pattern, pattern_len, t, line_no, &m, match_lines, 0);
 
             stream.match_lines = match_lines;
-            print_result(NULL, &stream);
+            print_result(&stream);
 
             free_match_line_list(match_lines);
         }

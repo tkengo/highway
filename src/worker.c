@@ -94,7 +94,7 @@ void *print_worker(void *arg)
         }
 
         if (current->matched) {
-            print_result(current->filename, current);
+            print_result(current);
 
             // Insert new line to separate from previouse group if --group options is available.
             if (!op.file_with_matches && op.group) {

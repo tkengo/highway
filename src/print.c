@@ -74,10 +74,10 @@ void print_line_number(match_line_node *match_line, int max_digit)
     }
 }
 
-void print_result(const char *filename, file_queue_node *current)
+void print_result(file_queue_node *current)
 {
     if (op.file_with_matches || op.group) {
-        print_filename(filename);
+        print_filename(current->filename);
     }
 
     // If `file_with_matches` option is available, match results don't print on console.
@@ -91,7 +91,7 @@ void print_result(const char *filename, file_queue_node *current)
     // Show all matched line on console in the current file.
     while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
         if (!op.group) {
-            print_filename(filename);
+            print_filename(current->filename);
         }
 
         if (op.show_line_number) {
