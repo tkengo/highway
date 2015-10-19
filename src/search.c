@@ -67,8 +67,8 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
                            char *current_buf)
 {
     char *new_buf;
-    if (*cur_buf_size < need_size + buf_offset + N) {
-        *cur_buf_size += need_size + (N - need_size % N);
+    if (*cur_buf_size < need_size + buf_offset + NMAX) {
+        *cur_buf_size += need_size + (NMAX - need_size % NMAX);
         new_buf = (char *)tc_calloc(*cur_buf_size, SIZE_OF_CHAR);
         memcpy(new_buf, copy_buf, need_size);
         tc_free(current_buf);
@@ -350,7 +350,7 @@ int search(int fd,
     char eol = '\n';
     size_t line_count = 0;
     size_t read_sum = 0;
-    size_t n = N;
+    size_t n = NMAX;
     ssize_t read_len;
     int buf_offset = 0;
     int match_count = 0;
@@ -363,7 +363,7 @@ int search(int fd,
     }
 
 do_search:
-    while ((read_len = read(fd, buf + buf_offset, N)) > 0) {
+    while ((read_len = read(fd, buf + buf_offset, NMAX)) > 0) {
         read_sum += read_len;
 
         // Search end position of the last line in the buffer. We search from the first position
@@ -409,7 +409,7 @@ do_search:
         // Break loop if file pointer is reached to EOF. But if the file descriptor is stdin, we
         // should wait for next input. For example, if hw search from the pipe that is created by
         // `tail -f`, we should continue searching until receive a signal.
-        if (fd != STDIN_FILENO && read_len < N) {
+        if (fd != STDIN_FILENO && read_len < NMAX) {
             break;
         }
 

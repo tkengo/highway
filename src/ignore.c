@@ -2,7 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#ifndef _WIN32
 #include <fnmatch.h>
+#else
+#include <shlwapi.h>
+#define fnmatch(x, y, z) (!PathMatchSpec(y, x))
+#define index(x, y) strchr(x, y)
+#define rindex(x, y) strchr(x, y)
+#endif
 #include "common.h"
 #include "ignore.h"
 #include "hwmalloc.h"
@@ -18,7 +25,7 @@ void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int dep
         pattern++;
     }
 
-    node->is_root = pattern[0] == '/';
+    node->is_root = IS_PATHSEP(pattern[0]);
     if (node->is_root) {
         pattern++;
     }
@@ -29,11 +36,15 @@ void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int dep
     }
 
     node->depth = depth;
-    node->is_dir = pattern[last_index] == '/';
+    node->is_dir = IS_PATHSEP(pattern[last_index]);
     if (node->is_dir) {
         pattern[last_index] = '\0';
     }
+#ifndef _WIN32
     node->is_no_dir = index(pattern, '/') == NULL;
+#else
+    node->is_no_dir = index(pattern, '/') == NULL && index(pattern, '\\') == NULL;
+#endif
 
     ignore_node **first;
     if (acceptable) {
@@ -100,7 +111,7 @@ ignore_hash *load_ignore_hash(const char *base, const char *path, int depth)
 bool match_path(ignore_node *node, const char *path, const struct dirent *entry)
 {
     while (node) {
-        if (node->is_dir && entry->d_type != DT_DIR) {
+        if (node->is_dir && !ENTRY_ISDIR(entry)) {
             node = node->next;
             continue;
         }
@@ -148,7 +159,7 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
 
     node = hash->path[(unsigned char)path[0]];
     while (node) {
-        bool is_skip = (node->is_dir && entry->d_type != DT_DIR) ||
+        bool is_skip = (node->is_dir && !ENTRY_ISDIR(entry)) ||
                        !node->is_root;
         if (is_skip) {
             node = node->next;
@@ -163,7 +174,7 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
 
     node = hash->path[(unsigned char)entry->d_name[0]];
     while (node) {
-        bool is_skip = (node->is_dir && entry->d_type != DT_DIR) ||
+        bool is_skip = (node->is_dir && ENTRY_ISDIR(entry)) ||
                        !node->is_no_dir ||
                        node->is_root;
         if (is_skip) {

@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#ifndef _WIN32
 #include <sys/ioctl.h>
+#endif
 #include <unistd.h>
 #include "hwmalloc.h"
 #include "config.h"
@@ -42,13 +44,23 @@ void init_option(int argc, char **argv)
         { 0, 0, 0, 0 }
     };
 
+#ifndef _WIN32
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+#endif
 
+#ifndef _WIN32
     op.worker            = MAX(DEFAULT_WORKER, sysconf(_SC_NPROCESSORS_ONLN) - 1);
+#else
+    op.worker            = DEFAULT_WORKER;
+#endif
     op.root_paths[0]     = ".";
     op.paths_count       = 1;
+#ifndef _WIN32
     op.omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);
+#else
+    op.omit_threshold    = MIN_LINE_LENGTH;
+#endif
     op.after_context     = 0;
     op.before_context    = 0;
     op.context           = 0;
@@ -62,7 +74,11 @@ void init_option(int argc, char **argv)
     op.stdout_redirect   = IS_STDOUT_REDIRECT;
     op.stdin_redirect    = IS_STDIN_REDIRECT;
     op.show_line_number  = !op.stdin_redirect;
+#ifndef _WIN32
     op.color             = !op.stdout_redirect;
+#else
+    op.color             = 0;
+#endif
     op.group             = !op.stdout_redirect && !op.stdin_redirect;
 
     int ch;
@@ -179,7 +195,7 @@ void init_option(int argc, char **argv)
         for (int i = 0; i < paths_count; i++) {
             char *path = argv[optind + i];
             int len = strlen(path);
-            if (path[len - 1] == '/') {
+            if (IS_PATHSEP(path[len - 1])) {
                 path[len - 1] = '\0';
             }
             op.root_paths[i] = path;
