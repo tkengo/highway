@@ -63,7 +63,7 @@ void init_option(int argc, char **argv)
     op.stdin_redirect    = IS_STDIN_REDIRECT;
     op.show_line_number  = !op.stdin_redirect;
     op.color             = !op.stdout_redirect;
-    op.group             = !op.stdout_redirect;
+    op.group             = !op.stdout_redirect && !op.stdin_redirect;
 
     int ch;
     bool show_version = false;
