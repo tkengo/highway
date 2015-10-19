@@ -3,42 +3,41 @@
 
 match_line_list *create_match_line_list()
 {
-    match_line_list *queue = (match_line_list *)tc_malloc(sizeof(match_line_list));
-    queue->first = NULL;
-    queue->last  = NULL;
-    queue->max_line_no = 1;
-    return queue;
+    match_line_list *list = (match_line_list *)tc_malloc(sizeof(match_line_list));
+    list->first = NULL;
+    list->last  = NULL;
+    list->max_line_no = 1;
+    return list;
 }
 
-match_line_node *enqueue_match_line(match_line_list *queue, match_line_node *node)
+match_line_node *enqueue_match_line(match_line_list *list, match_line_node *node)
 {
     node->next = NULL;
 
-    if (queue->first) {
-        queue->last->next = node;
-        queue->last = node;
+    if (list->first) {
+        list->last->next = node;
+        list->last = node;
     } else {
-        queue->first = node;
-        queue->last  = node;
+        list->first = node;
+        list->last  = node;
     }
 
     return node;
 }
 
-match_line_node *dequeue_match_line(match_line_list *queue)
+match_line_node *dequeue_match_line(match_line_list *list)
 {
-    if (queue->first) {
-        match_line_node *first = queue->first;
-        queue->first = first->next;
+    if (list->first) {
+        match_line_node *first = list->first;
+        list->first = first->next;
         return first;
     } else {
         return NULL;
     }
 }
 
-void free_match_line_list(match_line_list *queue)
-{
-    match_line_node *node = queue->first;
+void clear(match_line_list *list) {
+    match_line_node *node = list->first;
     while (node) {
         match_line_node *next = node->next;
         tc_free(node->line);
@@ -46,5 +45,13 @@ void free_match_line_list(match_line_list *queue)
         node = next;
     }
 
-    tc_free(queue);
+    list->first = NULL;
+    list->last  = NULL;
+    list->max_line_no = 1;
+}
+
+void free_match_line_list(match_line_list *list)
+{
+    clear(list);
+    tc_free(list);
 }

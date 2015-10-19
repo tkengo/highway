@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "highway.h"
 #include "hwmalloc.h"
 #include "worker.h"
@@ -61,38 +62,18 @@ int process_terminal()
 
 int process_stdin()
 {
-    char *line = NULL;
     char *pattern = op.pattern;
     int pattern_len = strlen(op.pattern);
-    size_t linecapp = 0;
-    ssize_t line_len;
-    match m;
     enum file_type t = FILE_TYPE_UTF8;
-
-    file_queue_node stream;
-    stream.t = t;
 
     if (!op.use_regex) {
         prepare_fjs(pattern, pattern_len, t);
     }
 
-    int line_no = 1;
-    while ((line_len = getline(&line, &linecapp, stdin)) > 0) {
-        if (search_by(line, line_len - 1, pattern, pattern_len, t, &m, 0)) {
-            match_line_list *match_lines = create_match_line_list();
+    match_line_list *match_lines = create_match_line_list();
+    search(STDIN_FILENO, pattern, pattern_len, t, match_lines, 0);
+    free_match_line_list(match_lines);
 
-            format_line(line, line_len - 1, pattern, pattern_len, t, line_no, &m, match_lines, 0);
-
-            stream.match_lines = match_lines;
-            print_result(&stream);
-
-            free_match_line_list(match_lines);
-        }
-
-        line_no++;
-    }
-
-    free(line);
     return 0;
 }
 

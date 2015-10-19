@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "search.h"
+#include "print.h"
 #include "regex.h"
 #include "hwmalloc.h"
 #include "file.h"
@@ -223,13 +224,13 @@ void before_context(const char *buf,
     }
 }
 
-char *after_context(const char *line_head,
-                    char *last_line_end,
-                    int rest_len,
-                    int line_no,
-                    match_line_list *match_lines,
-                    char eol,
-                    int *count)
+const char *after_context(const char *line_head,
+                          const char *last_line_end,
+                          int rest_len,
+                          int line_no,
+                          match_line_list *match_lines,
+                          char eol,
+                          int *count)
 {
     int lim = MAX(op.context, op.after_context);
     *count = 0;
@@ -260,9 +261,74 @@ char *after_context(const char *line_head,
     return last_line_end;
 }
 
+int search_buffer(const char *buf,
+                  size_t search_len,
+                  const char *pattern,
+                  int pattern_len,
+                  enum file_type t,
+                  char eol,
+                  size_t *line_count,
+                  char **last_new_line_scan_pos,
+                  match_line_list *match_lines,
+                  int thread_no)
+{
+    match m;
+    const char *p = buf;
+    int after_count;
+    int match_count = 0;
+
+    // Search the first pattern in the buffer.
+    while (search_by(p, search_len, pattern, pattern_len, t, &m, thread_no)) {
+        // Search head/end of the line, then calculate line length by using them.
+        int plen = m.end - m.start;
+        size_t rest_len = search_len - m.start - plen + 1;
+        const char *line_head = reverse_char(p, eol, m.start);
+        char *line_end  = memchr(p + m.start + plen, eol, rest_len);
+        line_head = line_head == NULL ? p : line_head + 1;
+
+        // Show after context.
+        const char *last_line_end_by_after = p;
+        if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
+            last_line_end_by_after = after_context(line_head, p, p - buf, *line_count, match_lines, eol, &after_count);
+        }
+
+        // Count lines.
+        *last_new_line_scan_pos = scan_newline(*last_new_line_scan_pos, line_end, line_count, eol);
+
+        // Show before context.
+        if (op.before_context > 0 || op.context > 0) {
+            before_context(buf, line_head, last_line_end_by_after, *line_count, match_lines, eol);
+        }
+
+        // Search next pattern in the current line and format them in order to print.
+        m.start -= line_head - p;
+        m.end    = m.start + plen;
+        match_count += format_line(line_head, line_end - line_head, pattern, plen, t, *line_count, &m, match_lines, thread_no);
+
+        search_len -= line_end - p + 1;
+        p = line_end + 1;
+    }
+
+    // Show last after context. And calculate max line number in this file in order to do
+    // padding line number on printing result.
+    if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
+        after_context(NULL, p, p - buf, *line_count, match_lines, eol, &after_count);
+        match_lines->max_line_no = *line_count + after_count;
+    } else {
+        match_lines->max_line_no = *line_count;
+    }
+
+    return match_count;
+}
+
 /**
  * Search the pattern from the file descriptor and add formatted matched lines to the queue if the
- * pattern was matched on the read buffer.
+ * pattern was matched in the read buffer. This method processes follow steps:
+ * 1. The file content will be read to a large buffer at once.
+ * 2. Search the pattern from the read buffer.
+ * 3. Scan new line count if need.
+ *
+ * This method returns match count.
  */
 int search(int fd,
            const char *pattern,
@@ -278,11 +344,9 @@ int search(int fd,
     ssize_t read_len;
     int buf_offset = 0;
     int match_count = 0;
-    int after_count;
     bool do_search = false;
     char *buf = (char *)tc_calloc(n, SIZE_OF_CHAR);
     char *last_new_line_scan_pos = buf;
-    match m;
 
     if (!op.use_regex) {
         prepare_fjs(pattern, pattern_len, t);
@@ -292,7 +356,8 @@ do_search:
     while ((read_len = read(fd, buf + buf_offset, N)) > 0) {
         read_sum += read_len;
 
-        // Search end of position of the last line in the buffer.
+        // Search end position of the last line in the buffer. We search from the first position
+        // and end position of the last line.
         char *last_line_end = reverse_char(buf + buf_offset, eol, read_len);
         if (last_line_end == NULL) {
             buf = last_new_line_scan_pos = grow_buf_if_shortage(&n, read_sum, buf_offset, buf, buf);
@@ -302,59 +367,46 @@ do_search:
 
         do_search = true;
 
+        // Search the pattern and construct matching results. The results will be stored to list
+        // `match_lines`.
         size_t search_len = last_line_end - buf;
-        size_t org_search_len = search_len;
-        char *p = buf;
+        int count = search_buffer(
+            buf,
+            search_len,
+            pattern,
+            pattern_len,
+            t,
+            eol,
+            &line_count,
+            &last_new_line_scan_pos,
+            match_lines,
+            thread_no
+        );
+        match_count += count;
 
-        // Search the first pattern in the buffer.
-        while (search_by(p, search_len, pattern, pattern_len, t, &m, thread_no)) {
-            // Search head/end of the line, then calculate line length by using them.
-            int plen = m.end - m.start;
-            size_t rest_len = search_len - m.start - plen + 1;
-            char *line_head = reverse_char(p, eol, m.start);
-            char *line_end  = memchr(p + m.start + plen, eol, rest_len);
-            line_head = line_head == NULL ? p : line_head + 1;
+        // If hw search the pattern from stdin stream and find the pattern in the buffer, results
+        // are printed immedeately.
+        if (fd == STDIN_FILENO && count > 0) {
+            file_queue_node stream;
+            stream.t = t;
+            stream.match_lines = match_lines;
+            print_result(&stream);
 
-            // Show after context.
-            char *last_line_end_by_after = p;
-            if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-                last_line_end_by_after = after_context(line_head, p, p - buf, line_count, match_lines, eol, &after_count);
-            }
-
-            // Count lines.
-            last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, line_end, &line_count, eol);
-
-            // Show before context.
-            if (op.before_context > 0 || op.context > 0) {
-                before_context(buf, line_head, last_line_end_by_after, line_count, match_lines, eol);
-            }
-
-            // Search next pattern in the current line and format them in order to print.
-            m.start -= line_head - p;
-            m.end    = m.start + plen;
-            match_count += format_line(line_head, line_end - line_head, pattern, plen, t, line_count, &m, match_lines, thread_no);
-
-            search_len -= line_end - p + 1;
-            p = line_end + 1;
+            // Release memory because matching line was already printed.
+            clear(match_lines);
         }
 
-        // Show last after context. And calculate max line number in this file in order to do
-        // padding line number on printing result.
-        if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-            after_context(NULL, p, p - buf, line_count, match_lines, eol, &after_count);
-            match_lines->max_line_no = line_count + after_count;
-        } else {
-            match_lines->max_line_no = line_count;
-        }
-
-        if (read_len < N) {
+        // Break loop if file pointer is reached to EOF. But if the file descriptor is stdin, we
+        // should wait for next input. For example, if hw search from the pipe that is created by
+        // `tail -f`, we should continue searching until receive a signal.
+        if (fd != STDIN_FILENO && read_len < N) {
             break;
         }
 
         last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);
         last_line_end++;
 
-        size_t rest = read_sum - org_search_len - 1;
+        size_t rest = read_sum - search_len - 1;
         char *new_buf = grow_buf_if_shortage(&n, rest, 0, last_line_end, buf);
         if (new_buf == last_line_end) {
             new_buf = buf;
