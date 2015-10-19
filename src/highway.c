@@ -76,17 +76,20 @@ int process_stdin()
         prepare_fjs(pattern, pattern_len, t);
     }
 
+    int line_no = 1;
     while ((line_len = getline(&line, &linecapp, stdin)) > 0) {
         if (search_by(line, line_len - 1, pattern, pattern_len, t, &m, 0)) {
             match_line_list *match_lines = create_match_line_list();
 
-            format_line(line, line_len - 1, pattern, pattern_len, t, 0, &m, match_lines, 0);
+            format_line(line, line_len - 1, pattern, pattern_len, t, line_no, &m, match_lines, 0);
 
             stream.match_lines = match_lines;
             print_result(NULL, &stream);
 
             free_match_line_list(match_lines);
         }
+
+        line_no++;
     }
 
     free(line);

@@ -6,6 +6,7 @@ match_line_list *create_match_line_list()
     match_line_list *queue = (match_line_list *)tc_malloc(sizeof(match_line_list));
     queue->first = NULL;
     queue->last  = NULL;
+    queue->max_line_no = 1;
     return queue;
 }
 
