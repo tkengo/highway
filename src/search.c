@@ -224,7 +224,7 @@ void before_context(const char *buf,
     }
 }
 
-const char *after_context(const char *line_head,
+const char *after_context(const char *next_line_head,
                           const char *last_line_end,
                           int rest_len,
                           int line_no,
@@ -236,7 +236,7 @@ const char *after_context(const char *line_head,
     *count = 0;
 
     for (int i = 0; i < lim; i++) {
-        if (line_head == last_line_end) {
+        if (next_line_head == last_line_end) {
             break;
         }
         char *after_line = memchr(last_line_end, eol, rest_len);
@@ -289,7 +289,7 @@ int search_buffer(const char *buf,
         // Show after context.
         const char *last_line_end_by_after = p;
         if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-            last_line_end_by_after = after_context(line_head, p, p - buf, *line_count, match_lines, eol, &after_count);
+            last_line_end_by_after = after_context(line_head, p, search_len - (p - buf), *line_count, match_lines, eol, &after_count);
         }
 
         // Count lines.
@@ -312,7 +312,7 @@ int search_buffer(const char *buf,
     // Show last after context. And calculate max line number in this file in order to do
     // padding line number on printing result.
     if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-        after_context(NULL, p, p - buf, *line_count, match_lines, eol, &after_count);
+        after_context(NULL, p, search_len - (p - buf), *line_count, match_lines, eol, &after_count);
         match_lines->max_line_no = *line_count + after_count;
     } else {
         match_lines->max_line_no = *line_count;
