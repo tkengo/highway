@@ -15,7 +15,7 @@ extern pthread_mutex_t print_mutex;
 extern pthread_cond_t file_cond;
 extern pthread_cond_t print_cond;
 
-extern bool is_complete_finding_file();
+extern bool is_complete_scan_file();
 
 bool init_mutex();
 void destroy_mutex();

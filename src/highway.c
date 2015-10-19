@@ -13,11 +13,11 @@
 #include "util.h"
 #include "regex.h"
 
-static bool complete_finding_file = false;
+static bool complete_scan_file = false;
 
-bool is_complete_finding_file()
+bool is_complete_scan_file()
 {
-    return complete_finding_file;
+    return complete_scan_file;
 }
 
 int process_terminal()
@@ -41,7 +41,7 @@ int process_terminal()
     for (int i = 0; i < op.paths_count; i++) {
         scan_target(queue, op.root_paths[i], NULL, 0);
     }
-    complete_finding_file = true;
+    complete_scan_file = true;
     pthread_cond_broadcast(&file_cond);
     pthread_cond_broadcast(&print_cond);
 

@@ -76,7 +76,7 @@ void *print_worker(void *arg)
         pthread_mutex_lock(&print_mutex);
         while (current == NULL || !current->searched) {
             // Break this loop if all files was searched.
-            if (current == NULL && is_complete_finding_file()) {
+            if (current == NULL && is_complete_scan_file()) {
                 pthread_mutex_unlock(&print_mutex);
                 return NULL;
             }
@@ -135,7 +135,7 @@ void *search_worker(void *arg)
         file_queue_node *current = peek_file_for_search(params->queue);
         if (current == NULL) {
             // Break this loop if all files was searched.
-            if (is_complete_finding_file()) {
+            if (is_complete_scan_file()) {
                 pthread_mutex_unlock(&file_mutex);
                 break;
             }
