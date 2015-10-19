@@ -14,7 +14,7 @@ void print_filename(const char *filename)
         fputs(filename, stdout);
     }
 
-    if (op.group) {
+    if (op.file_with_matches || op.group) {
         putc('\n', stdout);
     } else {
         putc(':', stdout);
@@ -72,7 +72,7 @@ void print_line_number(match_line_node *match_line, int max_digit)
 
 void print_result(const char *filename, file_queue_node *current)
 {
-    if (!op.stdin_redirect && op.group) {
+    if (op.file_with_matches || (!op.stdin_redirect && op.group)) {
         print_filename(filename);
     }
 
