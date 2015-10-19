@@ -8,6 +8,10 @@
 
 void print_filename(const char *filename)
 {
+    if (op.stdin_redirect) {
+        return;
+    }
+
     if (op.color) {
         printf("%s%s%s", FILENAME_COLOR, filename, RESET_COLOR);
     } else {
@@ -72,7 +76,7 @@ void print_line_number(match_line_node *match_line, int max_digit)
 
 void print_result(const char *filename, file_queue_node *current)
 {
-    if (op.file_with_matches || (!op.stdin_redirect && op.group)) {
+    if (op.file_with_matches || op.group) {
         print_filename(filename);
     }
 
