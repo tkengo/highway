@@ -94,6 +94,36 @@ int search_by(const char *buf,
     }
 }
 
+void format_match_string(char *line, const char *buf, match *m, int old_end, int index)
+{
+    int prefix_len = m->start - old_end;
+
+    if (!op.no_omit && prefix_len > op.omit_threshold) {
+        if (index == 0) {
+            int rest_len = op.omit_threshold - DOT_LENGTH;
+            APPEND_DOT(op.color, line);
+            strncat(line, buf + prefix_len - rest_len, rest_len);
+        } else {
+            int rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
+            strncat(line, buf, rest_len);
+            APPEND_DOT(op.color, line);
+            strncat(line, buf + prefix_len - rest_len, rest_len);
+        }
+    } else {
+        strncat(line, buf, prefix_len);
+    }
+
+    if (op.color) {
+        strcat(line, MATCH_WORD_COLOR);
+    }
+
+    strncat(line, buf + prefix_len, m->end - m->start);
+
+    if (op.color) {
+        strcat(line, RESET_COLOR);
+    }
+}
+
 /**
  * Search PATTERN from the line and format them.
  */
@@ -131,54 +161,29 @@ int format_line(const char *line,
         match_count++;
     }
 
+    // Allocate memory for colorized result string.
     int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
     match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
     node->line_no = line_no;
     node->context = CONTEXT_NONE;
     node->line = (char *)tc_calloc(buffer_len, SIZE_OF_CHAR);
 
-    const char *s = line;
+    const char *start = line;
     int old_end = 0;
     for (int i = 0; i < match_count; i++) {
-        int prefix_len = matches[i].start - old_end;
-        int plen = matches[i].end - matches[i].start;
+        format_match_string(node->line, start, &matches[i], old_end, i);
 
-        if (!op.no_omit && matches[i].start - old_end > op.omit_threshold) {
-            if (i == 0) {
-                int rest_len = op.omit_threshold - DOT_LENGTH;
-                APPEND_DOT(op.color, node->line);
-                strncat(node->line, s + prefix_len - rest_len, rest_len);
-            } else {
-                int rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
-                strncat(node->line, s, rest_len);
-                APPEND_DOT(op.color, node->line);
-                strncat(node->line, s + prefix_len - rest_len, rest_len);
-            }
-        } else {
-            strncat(node->line, s, prefix_len);
-        }
-
-        if (op.color) {
-            strcat(node->line, MATCH_WORD_COLOR);
-        }
-
-        strncat(node->line, s + prefix_len, plen);
-
-        if (op.color) {
-            strcat(node->line, RESET_COLOR);
-        }
-
-        s += prefix_len + plen;
+        start += matches[i].end - old_end;
         old_end = matches[i].end;
     }
 
     int last_end = matches[match_count - 1].end;
     int suffix_len = line_len - last_end;
     if (!op.stdout_redirect && !op.no_omit && suffix_len > op.omit_threshold) {
-        strncat(node->line, s, op.omit_threshold - DOT_LENGTH);
+        strncat(node->line, start, op.omit_threshold - DOT_LENGTH);
         APPEND_DOT(op.color, node->line);
     } else {
-        strncat(node->line, s, line_len - last_end);
+        strncat(node->line, start, line_len - last_end);
     }
     enqueue_match_line(match_lines, node);
 
@@ -219,7 +224,12 @@ void before_context(const char *buf,
         node->context = CONTEXT_BEFORE;
         node->line = (char *)tc_calloc(line_len + 1, SIZE_OF_CHAR);
 
-        strncat(node->line, lines[i], line_len);
+        if (!op.no_omit && line_len > op.omit_threshold) {
+            strncat(node->line, lines[i], op.omit_threshold - DOT_LENGTH);
+            APPEND_DOT(op.color, node->line);
+        } else {
+            strncat(node->line, lines[i], line_len);
+        }
         enqueue_match_line(match_lines, node);
     }
 }
@@ -257,7 +267,13 @@ const char *after_context(const char *next_line_head,
         node->context = CONTEXT_AFTER;
         node->line = (char *)tc_calloc(line_len + 1, SIZE_OF_CHAR);
 
-        strncat(node->line, current, line_len);
+        if (!op.no_omit && line_len > op.omit_threshold) {
+            strncat(node->line, current, op.omit_threshold - DOT_LENGTH);
+            APPEND_DOT(op.color, node->line);
+        } else {
+            strncat(node->line, current, line_len);
+        }
+
         enqueue_match_line(match_lines, node);
         (*count)++;
 
