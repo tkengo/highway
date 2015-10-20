@@ -25,7 +25,7 @@ int process_terminal()
 {
     file_queue *queue = create_file_queue();
 
-    // Launch worker count threads for searching pattern from files.
+    // Launch some worker threads for searching.
     pthread_t th[op.worker], pth;
     worker_params search_params[op.worker];
     for (int i = 0; i < op.worker; i++) {
@@ -39,6 +39,8 @@ int process_terminal()
     pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params);
     log_d("Worker num: %d", op.worker);
 
+    // Scan target files recursively. If target files was found, they are added to the file queue,
+    // and then search worker will take items from the queue and do searching.
     for (int i = 0; i < op.paths_count; i++) {
         scan_target(queue, op.root_paths[i], NULL, 0);
     }
@@ -46,6 +48,7 @@ int process_terminal()
     pthread_cond_broadcast(&file_cond);
     pthread_cond_broadcast(&print_cond);
 
+    // Wait for completion of search and print threads.
     for (int i = 0; i < op.worker; i++) {
         pthread_join(th[i], NULL);
     }

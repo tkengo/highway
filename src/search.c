@@ -224,43 +224,55 @@ void before_context(const char *buf,
     }
 }
 
+/**
+ * Collect after lines from `last_line_end`.
+ */
 const char *after_context(const char *next_line_head,
                           const char *last_line_end,
-                          int rest_len,
+                          ssize_t rest_len,
                           int line_no,
                           match_line_list *match_lines,
                           char eol,
                           int *count)
 {
+    const char *current = last_line_end;
     int lim = MAX(op.context, op.after_context);
     *count = 0;
 
     for (int i = 0; i < lim; i++) {
-        if (next_line_head == last_line_end) {
-            break;
-        }
-        char *after_line = memchr(last_line_end, eol, rest_len);
-        if (after_line == NULL) {
+        // Break this loop if the current line reaches to the next line.
+        if (next_line_head == current || rest_len <= 0) {
             break;
         }
 
-        int line_len = after_line - last_line_end;
+        const char *after_line = memchr(current, eol, rest_len);
+        if (after_line == NULL) {
+            after_line = current + rest_len;
+        }
+
+        int line_len = after_line - current;
 
         match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
         node->line_no = line_no + i + 1;
         node->context = CONTEXT_AFTER;
         node->line = (char *)tc_calloc(line_len + 1, SIZE_OF_CHAR);
 
-        strncat(node->line, last_line_end, line_len);
+        strncat(node->line, current, line_len);
         enqueue_match_line(match_lines, node);
         (*count)++;
 
-        last_line_end = ++after_line;
+        rest_len -= after_line - current + 1;
+        current = ++after_line;
     }
 
-    return last_line_end;
+    return current;
 }
 
+/**
+ * Search the pattern from the buffer as a specified encoding `t`. If matching string was found,
+ * results will be added to `match_lines` list. This method do also scanning new lines, and count
+ * up it.
+ */
 int search_buffer(const char *buf,
                   size_t search_len,
                   const char *pattern,
@@ -274,28 +286,28 @@ int search_buffer(const char *buf,
 {
     match m;
     const char *p = buf;
-    int after_count;
+    int after_count = 0;
     int match_count = 0;
 
     // Search the first pattern in the buffer.
     while (search_by(p, search_len, pattern, pattern_len, t, &m, thread_no)) {
-        // Search head/end of the line, then calculate line length by using them.
+        // Search head/end of the line, then calculate line length from them.
         int plen = m.end - m.start;
         size_t rest_len = search_len - m.start - plen + 1;
         const char *line_head = reverse_char(p, eol, m.start);
         char *line_end  = memchr(p + m.start + plen, eol, rest_len);
         line_head = line_head == NULL ? p : line_head + 1;
 
-        // Show after context.
+        // Collect after context.
         const char *last_line_end_by_after = p;
         if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-            last_line_end_by_after = after_context(line_head, p, search_len - (p - buf), *line_count, match_lines, eol, &after_count);
+            last_line_end_by_after = after_context(line_head, p, search_len, *line_count, match_lines, eol, &after_count);
         }
 
         // Count lines.
         *last_new_line_scan_pos = scan_newline(*last_new_line_scan_pos, line_end, line_count, eol);
 
-        // Show before context.
+        // Collect before context.
         if (op.before_context > 0 || op.context > 0) {
             before_context(buf, line_head, last_line_end_by_after, *line_count, match_lines, eol);
         }
@@ -309,14 +321,12 @@ int search_buffer(const char *buf,
         p = line_end + 1;
     }
 
-    // Show last after context. And calculate max line number in this file in order to do
+    // Collect last after context. And calculate max line number in this file in order to do
     // padding line number on printing result.
-    if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-        after_context(NULL, p, search_len - (p - buf), *line_count, match_lines, eol, &after_count);
-        match_lines->max_line_no = *line_count + after_count;
-    } else {
-        match_lines->max_line_no = *line_count;
+    if (match_count > 0 && search_len > 0 && (op.after_context > 0 || op.context > 0)) {
+        after_context(NULL, p, search_len, *line_count, match_lines, eol, &after_count);
     }
+    match_lines->max_line_no = *line_count + after_count;
 
     return match_count;
 }
