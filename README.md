@@ -46,19 +46,22 @@ $ hw -h
 
 ## Building from source
 
-1. Building dependencies:
+### Install building dependencies
 
 - gperftools
 - autoconf
 - automake
 
-2. Run follow commands:
+### Run follow commands
 
 ```shell
 $ git clone git@github.com:tkengo/highway.git
 $ cd highway
 $ ./tools/build.sh
 ```
+
+And then, the binary named `hw` is created in highway's root directory.
+
 ## License
 
 The MIT License (MIT)
