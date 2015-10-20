@@ -46,13 +46,15 @@ int process_terminal()
     }
     complete_scan_file = true;
     pthread_cond_broadcast(&file_cond);
-    pthread_cond_broadcast(&print_cond);
 
-    // Wait for completion of search and print threads.
+    // Wait for completion of searching threads.
     for (int i = 0; i < op.worker; i++) {
         pthread_join(th[i], NULL);
     }
-    pthread_cond_broadcast(&print_cond);
+
+    pthread_mutex_lock(&print_mutex);
+    pthread_mutex_unlock(&print_mutex);
+    pthread_cond_signal(&print_cond);
     pthread_join(pth, NULL);
 
     if (queue->last) {
