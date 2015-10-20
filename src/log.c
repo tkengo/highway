@@ -8,6 +8,10 @@
 #include "util.h"
 #include "color.h"
 
+#ifdef _WIN32
+//#define fprintf(...) fprintf_w32(__VA_ARGS__)
+#endif
+
 static enum log_level level = LOG_LEVEL_ERROR;
 static FILE *log_buffer_fd = NULL;
 

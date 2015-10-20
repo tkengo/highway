@@ -51,12 +51,14 @@ static char word_sp[256] = {
  */
 bool set_fd_rlimit(rlim_t limit)
 {
+#ifndef _WIN32
     struct rlimit r;
     getrlimit(RLIMIT_NOFILE, &r);
     if (limit < r.rlim_max) {
         r.rlim_cur = limit;
         return setrlimit(RLIMIT_NOFILE, &r) == 0;
     }
+#endif
 
     return false;
 }

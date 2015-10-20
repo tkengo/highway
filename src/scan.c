@@ -9,6 +9,7 @@
 #include "hwmalloc.h"
 #include "worker.h"
 #include "log.h"
+#include "util.h"
 
 /**
  * Add a filename to the queue and launch the sleeping search worker.
@@ -37,16 +38,20 @@ bool is_skip_entry(const struct dirent *entry)
     bool up     = len == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool hidden = len  > 1 && entry->d_name[0] == '.' && !op.all_files;
 
-    return (entry->d_type == DT_DIR && (cur || up)) || hidden;
+    return (ENTRY_ISDIR(entry) && (cur || up)) || hidden;
 }
 
 bool is_search_target(const struct dirent *entry)
 {
+#ifndef _WIN32
     if (op.follow_link) {
         return entry->d_type == DT_REG || entry->d_type == DT_LNK;
     } else {
         return entry->d_type == DT_REG;
     }
+#else
+    return 1;
+#endif
 }
 
 DIR *open_dir_or_queue_file(file_queue *queue, const char *dir_path)
@@ -124,6 +129,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
         }
 
         // Check if symlink exists. Skip this entry if not exist.
+#ifndef _WIN32
         if (op.follow_link && entry->d_type == DT_LNK) {
             char link[MAX_PATH_LENGTH] = { 0 };
             readlink(buf, link, MAX_PATH_LENGTH);
@@ -131,8 +137,9 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
                 continue;
             }
         }
+#endif
 
-        if (entry->d_type == DT_DIR) {
+        if (ENTRY_ISDIR(entry)) {
             scan_target(queue, buf, ignores, depth + 1);
         } else if (is_search_target(entry)) {
             enqueue_file_exclusively(queue, buf);
