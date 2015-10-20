@@ -55,7 +55,7 @@ void free_fjs()
  * A simple fast hybrid pattern-matching algorithm. The algorithm is proposed in
  * http://www.sciencedirect.com/science/article/pii/S1570866706001067
  */
-bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, enum file_type t, match *mt)
+bool fjs(const char *buf, size_t search_len, const char *pattern, int pattern_len, enum file_type t, match *mt)
 {
     if (pattern_len < 1 || search_len < pattern_len) {
         return false;
@@ -63,7 +63,7 @@ bool fjs(const char *buf, int search_len, const char *pattern, int pattern_len, 
 
     const unsigned char *p = (unsigned char *)pattern;
     const unsigned char *x = (unsigned char *)buf;
-    int n = search_len, m = pattern_len;
+    size_t n = search_len, m = pattern_len;
 
     int *betap = gbetap[t];
     int i = 0, j = 0, mp = m - 1, ip = mp;

@@ -79,7 +79,27 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
     return new_buf;
 }
 
-int search_by(const char *buf,
+int ch(const char *buf, ssize_t search_len, char ch, match *m)
+{
+    for (size_t i = 0; i < search_len; i++) {
+        if (buf[i] == ch) {
+            m->start = i;
+            m->end   = i + 1;
+
+            if (op.word_regex) {
+                if (is_word_match(buf, search_len, m)) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool search_by(const char *buf,
               size_t search_len,
               const char *pattern,
               int pattern_len,
@@ -89,6 +109,8 @@ int search_by(const char *buf,
 {
     if (op.use_regex) {
         return regex(buf, search_len, pattern, t, m, thread_no);
+    } else if (pattern_len == 1) {
+        return ch(buf, search_len, pattern[0], m);
     } else {
         return fjs(buf, search_len, pattern, pattern_len, t, m);
     }
@@ -128,7 +150,7 @@ void format_match_string(char *line, const char *buf, match *m, int old_end, int
  * Search PATTERN from the line and format them.
  */
 int format_line(const char *line,
-                int line_len,
+                size_t line_len,
                 const char *pattern,
                 int pattern_len,
                 enum file_type t,
@@ -333,7 +355,11 @@ int search_buffer(const char *buf,
         m.end    = m.start + plen;
         match_count += format_line(line_head, line_end - line_head, pattern, plen, t, *line_count, &m, match_lines, thread_no);
 
-        search_len -= line_end - p + 1;
+        size_t diff = line_end - p + 1;
+        if (search_len < diff) {
+            break;
+        }
+        search_len -= diff;
         p = line_end + 1;
     }
 
