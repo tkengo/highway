@@ -343,7 +343,9 @@ int search_buffer(const char *buf,
         }
 
         // Count lines.
-        *last_new_line_scan_pos = scan_newline(*last_new_line_scan_pos, line_end, line_count, eol);
+        if (op.show_line_number) {
+            *last_new_line_scan_pos = scan_newline(*last_new_line_scan_pos, line_end, line_count, eol);
+        }
 
         // Collect before context.
         if (op.before_context > 0 || op.context > 0) {
@@ -455,7 +457,9 @@ do_search:
             break;
         }
 
-        last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);
+        if (op.show_line_number) {
+            last_new_line_scan_pos = scan_newline(last_new_line_scan_pos, last_line_end, &line_count, eol);
+        }
         last_line_end++;
 
         size_t rest = read_sum - search_len - 1;
