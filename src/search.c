@@ -445,7 +445,7 @@ do_search:
             print_result(&stream);
 
             // Release memory because matching line was already printed.
-            clear(match_lines);
+            clear_line_list(match_lines);
         }
 
         // Break loop if file pointer is reached to EOF. But if the file descriptor is stdin, we

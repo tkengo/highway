@@ -36,7 +36,7 @@ match_line_node *dequeue_match_line(match_line_list *list)
     }
 }
 
-void clear(match_line_list *list) {
+void clear_line_list(match_line_list *list) {
     match_line_node *node = list->first;
     while (node) {
         match_line_node *next = node->next;
@@ -52,6 +52,6 @@ void clear(match_line_list *list) {
 
 void free_match_line_list(match_line_list *list)
 {
-    clear(list);
+    clear_line_list(list);
     tc_free(list);
 }

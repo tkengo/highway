@@ -26,7 +26,7 @@ struct _match_line_list {
 match_line_list *create_match_line_list();
 match_line_node *enqueue_match_line(match_line_list *list, match_line_node *node);
 match_line_node *dequeue_match_line(match_line_list *list);
-void clear(match_line_list *list);
+void clear_line_list(match_line_list *list);
 void free_match_line_list(match_line_list *list);
 
 #endif // _HW_LINE_LIST_H_
