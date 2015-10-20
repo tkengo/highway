@@ -36,5 +36,9 @@ AC_CHECK_MEMBERS([struct dirent.d_namlen], , , [#include <dirent.h>])
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([atexit memchr memmove memset regcomp strstr])
 
+if test "x$OS" = xWindows_NT; then
+  LIBS="$LIBS -lshlwapi -liconv"
+fi
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
