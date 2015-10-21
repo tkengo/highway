@@ -26,7 +26,7 @@ enum file_type detect_file_type(int fd, const char *filename)
     if (read_bytes == 0) {
         return FILE_TYPE_BINARY;
     }
-    if (lseek(fd, 0, SEEK_SET) != -1) {
+    if (lseek(fd, 0, SEEK_SET) == -1) {
         log_w("%s lseek failed. You might want to search again.", filename);
     }
 
