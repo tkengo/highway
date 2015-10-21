@@ -95,16 +95,12 @@ void *print_worker(void *arg)
         }
         pthread_mutex_unlock(&print_mutex);
 
-        if (current == NULL) {
-            continue;
-        }
-
         if (current->matched) {
             print_result(current);
 
             // Insert new line to separate from previouse group if --group options is available.
             if (!op.file_with_matches && op.group) {
-                fputs("\n", stdout);
+                putc('\n', stdout);
             }
 
             free_match_line_list(current->match_lines);
