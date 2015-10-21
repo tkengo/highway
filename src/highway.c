@@ -53,8 +53,8 @@ int process_terminal()
     }
 
     pthread_mutex_lock(&print_mutex);
-    pthread_mutex_unlock(&print_mutex);
     pthread_cond_signal(&print_cond);
+    pthread_mutex_unlock(&print_mutex);
     pthread_join(pth, NULL);
 
     if (queue->last) {
