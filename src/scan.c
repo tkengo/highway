@@ -18,8 +18,8 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
 {
     pthread_mutex_lock(&file_mutex);
     enqueue_file(queue, filename);
-    pthread_mutex_unlock(&file_mutex);
     pthread_cond_signal(&file_cond);
+    pthread_mutex_unlock(&file_mutex);
 }
 
 /**
