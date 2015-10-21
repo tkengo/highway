@@ -17,6 +17,6 @@ enum file_type {
 
 #include "file_queue.h"
 
-enum file_type detect_file_type(int fd);
+enum file_type detect_file_type(int fd, const char *filename);
 
 #endif // _HW_FILE_H_
