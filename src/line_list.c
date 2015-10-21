@@ -3,7 +3,7 @@
 
 match_line_list *create_match_line_list()
 {
-    match_line_list *list = (match_line_list *)tc_malloc(sizeof(match_line_list));
+    match_line_list *list = (match_line_list *)hw_malloc(sizeof(match_line_list));
     list->first = NULL;
     list->last  = NULL;
     list->max_line_no = 1;

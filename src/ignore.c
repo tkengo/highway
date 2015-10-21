@@ -18,7 +18,7 @@
 
 void add_ignore_node(ignore_hash *hash, const char *base, char *pattern, int depth)
 {
-    ignore_node *node = (ignore_node *)tc_calloc(1, sizeof(ignore_node));
+    ignore_node *node = (ignore_node *)hw_calloc(1, sizeof(ignore_node));
 
     bool acceptable = pattern[0] == '!';
     if (acceptable) {
@@ -83,7 +83,7 @@ ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *
     }
 
     if (hash == NULL) {
-        ignore_hash *new_hash = (ignore_hash *)tc_calloc(1, sizeof(ignore_hash));
+        ignore_hash *new_hash = (ignore_hash *)hw_calloc(1, sizeof(ignore_hash));
         hash = new_hash;
     }
 

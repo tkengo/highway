@@ -39,16 +39,16 @@ int process_terminal()
     }
     if (launched_worker_count == 0) {
         tc_free(queue);
-        log_e("Failed launch search worker: error no = %d", error_no);
-        return -1;
+        log_e("Launch search worker failed: error no = %d", error_no);
+        return 1;
     }
 
     // Launch one threads for printing result.
     worker_params print_params = { op.worker, queue };
     if ((error_no = pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params)) != 0) {
         tc_free(queue);
-        log_e("Failed launch print worker: error no = %d", error_no);
-        return -1;
+        log_e("Launch print worker failed: error no = %d", error_no);
+        return 1;
     }
     log_d("Worker num: %d", op.worker);
 

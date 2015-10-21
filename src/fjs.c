@@ -25,7 +25,7 @@ void prepare_fjs(const char *pattern, int pattern_len, enum file_type t)
     }
 
     // Generate betap.
-    int *betap = gbetap[t] = (int *)tc_malloc(sizeof(int) * (pattern_len + 1));
+    int *betap = gbetap[t] = (int *)hw_malloc(sizeof(int) * (pattern_len + 1));
     i = 0;
     j = betap[0] = -1;
     while (i < m) {
