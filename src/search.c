@@ -173,7 +173,7 @@ int format_line(const char *line,
         // Two times memory will be reallocated if match size is not enough.
         if (n <= match_count) {
             n *= 2;
-            matches = (match *)realloc(matches, sizeof(match) * n);
+            matches = (match *)tc_realloc(matches, sizeof(match) * n);
         }
 
         matches[match_count].start += offset;
