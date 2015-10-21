@@ -23,20 +23,33 @@ bool is_complete_scan_file()
 
 int process_terminal()
 {
+    int error_no;
     file_queue *queue = create_file_queue();
 
     // Launch some worker threads for searching.
     pthread_t th[op.worker], pth;
     worker_params search_params[op.worker];
+    int launched_worker_count = 0;
     for (int i = 0; i < op.worker; i++) {
         search_params[i].index = i;
         search_params[i].queue = queue;
-        pthread_create(&th[i], NULL, (void *)search_worker, (void *)&search_params[i]);
+        if ((error_no = pthread_create(&th[i], NULL, (void *)search_worker, (void *)&search_params[i])) == 0) {
+            launched_worker_count++;
+        }
+    }
+    if (launched_worker_count == 0) {
+        tc_free(queue);
+        log_e("Failed launch search worker: error no = %d", error_no);
+        return -1;
     }
 
     // Launch one threads for printing result.
     worker_params print_params = { op.worker, queue };
-    pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params);
+    if ((error_no = pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params)) != 0) {
+        tc_free(queue);
+        log_e("Failed launch print worker: error no = %d", error_no);
+        return -1;
+    }
     log_d("Worker num: %d", op.worker);
 
     // Scan target files recursively. If target files was found, they are added to the file queue,
