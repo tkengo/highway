@@ -23,31 +23,27 @@ bool is_complete_scan_file()
 
 int process_terminal()
 {
-    int error_no;
+    int r;
     file_queue *queue = create_file_queue();
 
     // Launch some worker threads for searching.
     pthread_t th[op.worker], pth;
     worker_params search_params[op.worker];
-    int launched_worker_count = 0;
     for (int i = 0; i < op.worker; i++) {
         search_params[i].index = i;
         search_params[i].queue = queue;
-        if ((error_no = pthread_create(&th[i], NULL, (void *)search_worker, (void *)&search_params[i])) == 0) {
-            launched_worker_count++;
+        if ((r = pthread_create(&th[i], NULL, (void *)search_worker, (void *)&search_params[i])) != 0) {
+            tc_free(queue);
+            log_e("Error in search pthread_create. %s (%d)", strerror(r), r);
+            return 1;
         }
-    }
-    if (launched_worker_count == 0) {
-        tc_free(queue);
-        log_e("Launch search worker failed: error no = %d", error_no);
-        return 1;
     }
 
     // Launch one threads for printing result.
     worker_params print_params = { op.worker, queue };
-    if ((error_no = pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params)) != 0) {
+    if ((r = pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params)) != 0) {
         tc_free(queue);
-        log_e("Launch print worker failed: error no = %d", error_no);
+        log_e("Error in print pthread_create. %s (%d)", strerror(r), r);
         return 1;
     }
     log_d("Worker num: %d", op.worker);
