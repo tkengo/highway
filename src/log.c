@@ -98,4 +98,5 @@ void log_flush()
     }
     fclose(log_buffer_fd);
     log_buffer_fd = NULL;
+    pthread_mutex_destroy(&log_mutex);
 }
