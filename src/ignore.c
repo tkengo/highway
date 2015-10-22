@@ -78,7 +78,6 @@ ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *
 {
     FILE *fp = fopen(path, "r");
     if (!fp) {
-        fclose(fp);
         return hash;
     }
 
