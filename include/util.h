@@ -1,5 +1,5 @@
-#ifndef _HW_UTIL_H_
-#define _HW_UTIL_H_
+#ifndef HW_UTIL_H
+#define HW_UTIL_H
 
 #ifndef _WIN32
 #include <sys/resource.h>
@@ -33,4 +33,4 @@ void to_sjis(char *in, size_t nin, char *out, size_t nout);
 void to_utf8_from_euc(char *in, size_t nin, char *out, size_t nout);
 void to_utf8_from_sjis(char *in, size_t nin, char *out, size_t nout);
 
-#endif // _HW_UTIL_H_
+#endif // HW_UTIL_H

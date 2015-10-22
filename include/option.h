@@ -1,5 +1,5 @@
-#ifndef _HW_OPTION_H_
-#define _HW_OPTION_H_
+#ifndef HW_OPTION_H
+#define HW_OPTION_H
 
 #include "highway.h"
 #include "common.h"
@@ -34,4 +34,4 @@ extern hw_option op;
 void init_option(int argc, char **argv);
 void free_option();
 
-#endif // _HW_OPTION_H_
+#endif // HW_OPTION_H

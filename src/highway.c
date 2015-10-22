@@ -23,6 +23,7 @@ bool is_complete_scan_file()
 
 int process_terminal()
 {
+    int r;
     file_queue *queue = create_file_queue();
 
     // Launch some worker threads for searching.
@@ -31,12 +32,20 @@ int process_terminal()
     for (int i = 0; i < op.worker; i++) {
         search_params[i].index = i;
         search_params[i].queue = queue;
-        pthread_create(&th[i], NULL, (void *)search_worker, (void *)&search_params[i]);
+        if ((r = pthread_create(&th[i], NULL, (void *)search_worker, (void *)&search_params[i])) != 0) {
+            tc_free(queue);
+            log_e("Error in search pthread_create. %s (%d)", strerror(r), r);
+            return 1;
+        }
     }
 
     // Launch one threads for printing result.
     worker_params print_params = { op.worker, queue };
-    pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params);
+    if ((r = pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params)) != 0) {
+        tc_free(queue);
+        log_e("Error in print pthread_create. %s (%d)", strerror(r), r);
+        return 1;
+    }
     log_d("Worker num: %d", op.worker);
 
     // Scan target files recursively. If target files was found, they are added to the file queue,
@@ -64,36 +73,6 @@ int process_terminal()
 
     return 0;
 }
-
-#ifdef _WIN32
-static int getline(char **lineptr, size_t *n, FILE *stream)
-{
-    static char line[256];
-    char *ptr;
-    unsigned int len;
-
-    if (lineptr == NULL || n == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-    if (ferror(stream) || feof(stream))
-        return -1;
-
-    fgets(line,256,stream);
-    ptr = strchr(line,'\n');
-    if (ptr) *ptr = '\0';
-    len = strlen(line);
-    if ((len+1) < 256) {
-        ptr = realloc(*lineptr, 256);
-        if (ptr == NULL)
-            return(-1);
-        *lineptr = ptr;
-        *n = 256;
-    }
-    strcpy(*lineptr,line);
-    return(len);
-}
-#endif
 
 int process_stdin()
 {

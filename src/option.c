@@ -182,7 +182,7 @@ void init_option(int argc, char **argv)
     }
 
     char *pattern = argv[optind++];
-    op.pattern = (char *)tc_malloc(SIZE_OF_CHAR * (strlen(pattern) + 1));
+    op.pattern = (char *)hw_malloc(SIZE_OF_CHAR * (strlen(pattern) + 1));
     strcpy(op.pattern, pattern);
 
     int paths_count = argc - optind;

@@ -5,7 +5,7 @@
 
 file_queue *create_file_queue()
 {
-    file_queue *queue = (file_queue *)tc_malloc(sizeof(file_queue));
+    file_queue *queue = (file_queue *)hw_malloc(sizeof(file_queue));
     queue->first   = NULL;
     queue->last    = NULL;
     queue->current_for_search = NULL;
@@ -14,7 +14,7 @@ file_queue *create_file_queue()
 
 file_queue_node *enqueue_file(file_queue *queue, const char *filename)
 {
-    file_queue_node *node = (file_queue_node *)tc_malloc(sizeof(file_queue_node));
+    file_queue_node *node = (file_queue_node *)hw_malloc(sizeof(file_queue_node));
     node->next        = NULL;
     node->prev        = NULL;
     node->match_lines = NULL;

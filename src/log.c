@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <pthread.h>
 #include "highway.h"
 #include "log.h"
 #include "util.h"
@@ -14,6 +15,7 @@
 
 static enum log_level level = LOG_LEVEL_ERROR;
 static FILE *log_buffer_fd = NULL;
+static pthread_mutex_t log_mutex;
 
 void set_log_level(enum log_level l)
 {
@@ -32,6 +34,10 @@ FILE *init_buffer_fd()
                 log_buffer_fd = tmpfile();
             }
         }
+
+        if (log_buffer_fd != NULL) {
+            pthread_mutex_init(&log_mutex, NULL);
+        }
     }
 
     return log_buffer_fd;
@@ -41,24 +47,28 @@ void log_e(const char *fmt, ...)
 {
     FILE *fd = init_buffer_fd();
 
+    pthread_mutex_lock(&log_mutex);
     va_list args;
     va_start(args, fmt);
     fprintf(fd, "%sFatal%s: ", ERROR_COLOR, RESET_COLOR);
     vfprintf(fd, fmt, args);
     fputs("\n", fd);
     va_end(args);
+    pthread_mutex_unlock(&log_mutex);
 }
 
 void log_w(const char *fmt, ...)
 {
     FILE *fd = init_buffer_fd();
 
+    pthread_mutex_lock(&log_mutex);
     va_list args;
     va_start(args, fmt);
     fprintf(fd, "%sWarning%s: ", WARNING_COLOR, RESET_COLOR);
     vfprintf(fd, fmt, args);
     fputs("\n", fd);
     va_end(args);
+    pthread_mutex_unlock(&log_mutex);
 }
 
 void log_d(const char *fmt, ...)
@@ -88,4 +98,5 @@ void log_flush()
     }
     fclose(log_buffer_fd);
     log_buffer_fd = NULL;
+    pthread_mutex_destroy(&log_mutex);
 }

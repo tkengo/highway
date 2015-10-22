@@ -3,18 +3,15 @@
 /sample
 /include/config.h*
 /include/stamp-h1
-/depcomp
 /Makefile
 /Makefile.in
 /aclocal.m4
 /autom4te.cache
 /autoscan.log
-/compile
-/configure
-/config.*
-/install-sh
-/missing
+/config*
 
 *.o
 .deps
 .dirstamp
+
+!configure.ac

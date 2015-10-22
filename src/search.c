@@ -69,7 +69,7 @@ char *grow_buf_if_shortage(size_t *cur_buf_size,
     char *new_buf;
     if (*cur_buf_size < need_size + buf_offset + NMAX) {
         *cur_buf_size += need_size + (NMAX - need_size % NMAX);
-        new_buf = (char *)tc_calloc(*cur_buf_size, SIZE_OF_CHAR);
+        new_buf = (char *)hw_calloc(*cur_buf_size, SIZE_OF_CHAR);
         memcpy(new_buf, copy_buf, need_size);
         tc_free(current_buf);
     } else {
@@ -162,7 +162,7 @@ int format_line(const char *line,
     // Create new match object default size. Maybe, in the most case, default size is very enough
     // because the PATTERN is appeared in one line only less than 10 count.
     int n = 10;
-    match *matches = (match *)tc_malloc(sizeof(match) * n);
+    match *matches = (match *)hw_malloc(sizeof(match) * n);
 
     int match_count = 1;
     int offset = first_match->end;
@@ -173,7 +173,7 @@ int format_line(const char *line,
         // Two times memory will be reallocated if match size is not enough.
         if (n <= match_count) {
             n *= 2;
-            matches = (match *)realloc(matches, sizeof(match) * n);
+            matches = (match *)hw_realloc(matches, sizeof(match) * n);
         }
 
         matches[match_count].start += offset;
@@ -185,10 +185,10 @@ int format_line(const char *line,
 
     // Allocate memory for colorized result string.
     int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
-    match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
+    match_line_node *node = (match_line_node *)hw_malloc(sizeof(match_line_node));
     node->line_no = line_no;
     node->context = CONTEXT_NONE;
-    node->line = (char *)tc_calloc(buffer_len, SIZE_OF_CHAR);
+    node->line = (char *)hw_calloc(buffer_len, SIZE_OF_CHAR);
 
     const char *start = line;
     int old_end = 0;
@@ -241,10 +241,10 @@ void before_context(const char *buf,
     for (int i = before_count; i > 0; i--) {
         int line_len = lines[i - 1] - lines[i] - 1;
 
-        match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
+        match_line_node *node = (match_line_node *)hw_malloc(sizeof(match_line_node));
         node->line_no = line_no - i;
         node->context = CONTEXT_BEFORE;
-        node->line = (char *)tc_calloc(line_len + 1, SIZE_OF_CHAR);
+        node->line = (char *)hw_calloc(line_len + 1, SIZE_OF_CHAR);
 
         if (!op.no_omit && line_len > op.omit_threshold) {
             strncat(node->line, lines[i], op.omit_threshold - DOT_LENGTH);
@@ -284,10 +284,10 @@ const char *after_context(const char *next_line_head,
 
         int line_len = after_line - current;
 
-        match_line_node *node = (match_line_node *)tc_malloc(sizeof(match_line_node));
+        match_line_node *node = (match_line_node *)hw_malloc(sizeof(match_line_node));
         node->line_no = line_no + i + 1;
         node->context = CONTEXT_AFTER;
-        node->line = (char *)tc_calloc(line_len + 1, SIZE_OF_CHAR);
+        node->line = (char *)hw_calloc(line_len + 1, SIZE_OF_CHAR);
 
         if (!op.no_omit && line_len > op.omit_threshold) {
             strncat(node->line, current, op.omit_threshold - DOT_LENGTH);
@@ -399,7 +399,7 @@ int search(int fd,
     int buf_offset = 0;
     int match_count = 0;
     bool do_search = false;
-    char *buf = (char *)tc_calloc(n, SIZE_OF_CHAR);
+    char *buf = (char *)hw_calloc(n, SIZE_OF_CHAR);
     char *last_new_line_scan_pos = buf;
 
     if (!op.use_regex) {

@@ -15,6 +15,7 @@ hw_SOURCES = \
 			 src/util.c \
 			 src/regex.c \
 			 src/fjs.c \
+			 src/hwmalloc.c \
 			 src/help.c \
 			 vendor/onigmo/regcomp.c \
 			 vendor/onigmo/regenc.c \

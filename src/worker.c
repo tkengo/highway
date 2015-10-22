@@ -60,10 +60,18 @@ void *print_worker(void *arg)
     worker_params *params = (worker_params *)arg;
     file_queue *queue = params->queue;
 
+    // We should wait for queuing first queue item because print worker is launched before scanning
+    // target file.
     pthread_mutex_lock(&print_mutex);
-    pthread_cond_wait(&print_cond, &print_mutex);
+    while (queue->first == NULL) {
+        if (is_complete_scan_file()) {
+            break;
+        }
+        pthread_cond_wait(&print_cond, &print_mutex);
+    }
     pthread_mutex_unlock(&print_mutex);
 
+    // If the file queue is empty, it will do nothing.
     if (queue->first == NULL) {
         return NULL;
     }
@@ -80,25 +88,19 @@ void *print_worker(void *arg)
                 pthread_mutex_unlock(&print_mutex);
                 return NULL;
             }
-
             pthread_cond_wait(&print_cond, &print_mutex);
-
             if (current == NULL) {
                 current = prev->next;
             }
         }
         pthread_mutex_unlock(&print_mutex);
 
-        if (current == NULL) {
-            continue;
-        }
-
         if (current->matched) {
             print_result(current);
 
             // Insert new line to separate from previouse group if --group options is available.
             if (!op.file_with_matches && op.group) {
-                fputs("\n", stdout);
+                putc('\n', stdout);
             }
 
             free_match_line_list(current->match_lines);
@@ -125,6 +127,7 @@ void *search_worker(void *arg)
 {
     enum file_type t;
     worker_params *params = (worker_params *)arg;
+    file_queue_node *current;
     const size_t out_len = 1024;
     int utf8_pattern_len = strlen(op.pattern);
 
@@ -132,26 +135,20 @@ void *search_worker(void *arg)
         // This worker takes out a search target file from the queue. If the queue is empty, worker
         // will be waiting until find at least one target file.
         pthread_mutex_lock(&file_mutex);
-        file_queue_node *current = peek_file_for_search(params->queue);
-        if (current == NULL) {
+        while ((current = peek_file_for_search(params->queue)) == NULL) {
             // Break this loop if all files was searched.
             if (is_complete_scan_file()) {
                 pthread_mutex_unlock(&file_mutex);
-                break;
+                return NULL;
             }
             pthread_cond_wait(&file_cond, &file_mutex);
-            current = peek_file_for_search(params->queue);
         }
         pthread_mutex_unlock(&file_mutex);
-
-        if (current == NULL) {
-            continue;
-        }
 
         // Check file type of the target file, then if it is a binary, we skip it because the hw is
         // the software in order to search "source code", so searching binary files is not good.
         int fd = open(current->filename, O_RDONLY);
-        if (fd != -1 && (t = detect_file_type(fd)) != FILE_TYPE_BINARY) {
+        if (fd != -1 && (t = detect_file_type(fd, current->filename)) != FILE_TYPE_BINARY) {
             char *pattern = op.pattern;
 
             // Convert the pattern to appropriate encoding if an encoding of the target file is

@@ -25,7 +25,7 @@ bool onig_init_wrap()
         return false;
     }
 
-    reg = (regex_t **)tc_calloc(op.worker, sizeof(regex_t *));
+    reg = (regex_t **)hw_calloc(op.worker, sizeof(regex_t *));
 
     return true;
 }

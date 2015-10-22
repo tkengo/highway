@@ -1,5 +1,5 @@
-#ifndef _HW_LINE_LIST_H_
-#define _HW_LINE_LIST_H_
+#ifndef HW_LINE_LIST_H
+#define HW_LINE_LIST_H
 
 typedef struct _match_line_list match_line_list;
 typedef struct _match_line_node match_line_node;
@@ -29,4 +29,4 @@ match_line_node *dequeue_match_line(match_line_list *list);
 void clear_line_list(match_line_list *list);
 void free_match_line_list(match_line_list *list);
 
-#endif // _HW_LINE_LIST_H_
+#endif // HW_LINE_LIST_H

@@ -1,5 +1,5 @@
-#ifndef _HW_WORKER_H_
-#define _HW_WORKER_H_
+#ifndef HW_WORKER_H
+#define HW_WORKER_H
 
 #include "common.h"
 #include "file_queue.h"
@@ -22,4 +22,4 @@ void destroy_mutex();
 void *print_worker(void *arg);
 void *search_worker(void *arg);
 
-#endif // _HW_WORKER_H_
+#endif // HW_WORKER_H

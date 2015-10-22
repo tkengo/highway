@@ -1,5 +1,5 @@
-#ifndef _HW_FILE_QUEUE_H_
-#define _HW_FILE_QUEUE_H_
+#ifndef HW_FILE_QUEUE_H
+#define HW_FILE_QUEUE_H
 
 #include <stdlib.h>
 #include "common.h"
@@ -31,4 +31,4 @@ file_queue *create_file_queue();
 file_queue_node *enqueue_file(file_queue *queue, const char *filename);
 file_queue_node *peek_file_for_search(file_queue *queue);
 
-#endif // _HW_FILE_QUEUE_H_
+#endif // HW_FILE_QUEUE_H

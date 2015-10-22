@@ -7,11 +7,12 @@
 #include <unistd.h>
 #include "file.h"
 #include "util.h"
+#include "log.h"
 
 /**
  * Check if the filename is a binary file.
  */
-enum file_type detect_file_type(int fd)
+enum file_type detect_file_type(int fd, const char *filename)
 {
     if (op.stdin_redirect) {
         return FILE_TYPE_UTF8;
@@ -25,7 +26,9 @@ enum file_type detect_file_type(int fd)
     if (read_bytes == 0) {
         return FILE_TYPE_BINARY;
     }
-    lseek(fd, 0, SEEK_SET);
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        log_w("%s lseek failed. You might want to search again.", filename);
+    }
 
     int unknown = 0, utf8 = 0, euc = 0, sjis = 0;
     for (int i = 0; i < read_bytes; i++) {
