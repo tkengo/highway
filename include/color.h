@@ -1,5 +1,5 @@
-#ifndef _HW_COLOR_H_
-#define _HW_COLOR_H_
+#ifndef HW_COLOR_H
+#define HW_COLOR_H
 
 #define ERROR_COLOR "\033[31m"
 #define WARNING_COLOR "\033[33m"
@@ -21,4 +21,4 @@
 #define LINE_NO_ESCAPE_LEN (LINE_NO_COLOR_LEN + RESET_COLOR_LEN)
 #define OMIT_ESCAPE_LEN (OMIT_COLOR_LEN + RESET_COLOR_LEN)
 
-#endif // _HW_COLOR_H_
+#endif // HW_COLOR_H

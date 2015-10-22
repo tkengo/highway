@@ -1,5 +1,5 @@
-#ifndef _HW_HWMALLOC_H_
-#define _HW_HWMALLOC_H_
+#ifndef HW_HWMALLOC_H
+#define HW_HWMALLOC_H
 
 #include "config.h"
 
@@ -16,4 +16,4 @@ void *hw_malloc(size_t size);
 void *hw_calloc(size_t count, size_t size);
 void *hw_realloc(void *ptr, size_t size);
 
-#endif // _HW_HWMALLOC_H_
+#endif // HW_HWMALLOC_H

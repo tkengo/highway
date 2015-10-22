@@ -1,5 +1,5 @@
-#ifndef _HW_TABLE_H_
-#define _HW_TABLE_H_
+#ifndef HW_TABLE_H
+#define HW_TABLE_H
 
 #define BAD_CHARACTER_TABLE_SIZE 256
 #define NMAX 65536
@@ -24,4 +24,4 @@ bool is_word_match(const char *buf, int len, match *m);
 void generate_bad_character_table(const char *pattern, enum file_type t);
 int search(int fd, const char *pattern, int pattern_len, enum file_type t, match_line_list *match_lines, int thread_no);
 
-#endif // _HW_TABLE_H_
+#endif // HW_TABLE_H

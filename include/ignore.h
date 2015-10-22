@@ -1,5 +1,5 @@
-#ifndef _HW_IGNORE_H_
-#define _HW_IGNORE_H_
+#ifndef HW_IGNORE_H
+#define HW_IGNORE_H
 
 #include "common.h"
 #include "file.h"
@@ -30,4 +30,4 @@ ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *
 ignore_hash *load_ignore_hash(const char *base, const char *path, int depth);
 void free_ignore_hash(ignore_hash *hash, int depth);
 
-#endif // _HW_IGNORE_H_
+#endif // HW_IGNORE_H

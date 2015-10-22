@@ -1,5 +1,5 @@
-#ifndef _HW_FILE_H_
-#define _HW_FILE_H_
+#ifndef HW_FILE_H
+#define HW_FILE_H
 
 #include <dirent.h>
 #include "common.h"
@@ -19,4 +19,4 @@ enum file_type {
 
 enum file_type detect_file_type(int fd, const char *filename);
 
-#endif // _HW_FILE_H_
+#endif // HW_FILE_H

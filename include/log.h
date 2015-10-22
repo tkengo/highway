@@ -1,5 +1,5 @@
-#ifndef _HW_LOG_H_
-#define _HW_LOG_H_
+#ifndef HW_LOG_H
+#define HW_LOG_H
 
 enum log_level {
     LOG_LEVEL_DEBUG = 1,
@@ -12,4 +12,4 @@ void log_w(const char *fmt, ...);
 void log_d(const char *fmt, ...);
 void log_flush();
 
-#endif // _HW_LOG_H_
+#endif // HW_LOG_H

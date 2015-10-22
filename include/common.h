@@ -1,5 +1,5 @@
-#ifndef _HW_COMMON_H_
-#define _HW_COMMON_H_
+#ifndef HW_COMMON_H
+#define HW_COMMON_H
 
 typedef char bool;
 
@@ -8,4 +8,4 @@ typedef char bool;
 
 #define SIZE_OF_CHAR 1
 
-#endif // _HW_COMMON_H_
+#endif // HW_COMMON_H
