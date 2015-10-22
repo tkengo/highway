@@ -8,6 +8,7 @@
 #else
 #include <stdlib.h>
 #define tc_malloc malloc
+#define tc_realloc realloc
 #define tc_calloc calloc
 #define tc_free free
 #endif
