@@ -399,31 +399,38 @@ int search(int fd,
     int buf_offset = 0;
     int match_count = 0;
     bool do_search = false;
-    char *buf = (char *)hw_calloc(n, SIZE_OF_CHAR);
+    char *buf = (char *)hw_calloc(n + 1, SIZE_OF_CHAR);
     char *last_new_line_scan_pos = buf;
+    char *last_line_end;
 
     if (!op.use_regex) {
         prepare_fjs(pattern, pattern_len, t);
     }
 
-do_search:
     while ((read_len = read(fd, buf + buf_offset, NMAX)) > 0) {
         read_sum += read_len;
 
         // Search end position of the last line in the buffer. We search from the first position
         // and end position of the last line.
-        char *last_line_end = reverse_char(buf + buf_offset, eol, read_len);
-        if (last_line_end == NULL) {
-            buf = last_new_line_scan_pos = grow_buf_if_shortage(&n, read_sum, buf_offset, buf, buf);
-            buf_offset += read_len;
-            continue;
+        size_t search_len;
+        if (read_len < NMAX) {
+            last_line_end = buf + read_sum;
+            search_len = read_sum;
+            buf[read_sum] = eol;
+        } else {
+            last_line_end = reverse_char(buf + buf_offset, eol, read_len);
+            if (last_line_end == NULL) {
+                buf = last_new_line_scan_pos = grow_buf_if_shortage(&n, read_sum, buf_offset, buf, buf);
+                buf_offset += read_len;
+                continue;
+            }
+            search_len = last_line_end - buf;
         }
 
         do_search = true;
 
         // Search the pattern and construct matching results. The results will be stored to list
         // `match_lines`.
-        size_t search_len = last_line_end - buf;
         int count = search_buffer(
             buf,
             search_len,
@@ -462,25 +469,18 @@ do_search:
         }
         last_line_end++;
 
-        size_t rest = read_sum - search_len - 1;
-        char *new_buf = grow_buf_if_shortage(&n, rest, 0, last_line_end, buf);
-        if (new_buf == last_line_end) {
-            new_buf = buf;
-            memmove(new_buf, last_line_end, rest);
+        ssize_t rest = read_sum - search_len - 1;
+        if (rest >= 0) {
+            char *new_buf = grow_buf_if_shortage(&n, rest, 0, last_line_end, buf);
+            if (new_buf == last_line_end) {
+                new_buf = buf;
+                memmove(new_buf, last_line_end, rest);
+            }
+            buf = last_new_line_scan_pos = new_buf;
+
+            buf_offset = rest;
+            read_sum = rest;
         }
-        buf = last_new_line_scan_pos = new_buf;
-
-        buf_offset = rest;
-        read_sum = rest;
-    }
-
-    // If there is no new line in the file, we try to search again by '\r' from the head of the
-    // file. And also if there is no '\r' in the file, we will skip this file.
-    if (read_len > 0 && !do_search && eol == '\n') {
-        eol = '\r';
-        read_sum = buf_offset = 0;
-        lseek(fd, 0, SEEK_SET);
-        goto do_search;
     }
 
     tc_free(buf);
