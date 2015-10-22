@@ -174,7 +174,7 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
 
     node = hash->path[(unsigned char)entry->d_name[0]];
     while (node) {
-        bool is_skip = (node->is_dir && ENTRY_ISDIR(entry)) ||
+        bool is_skip = (node->is_dir && !ENTRY_ISDIR(entry)) ||
                        !node->is_no_dir ||
                        node->is_root;
         if (is_skip) {
