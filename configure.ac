@@ -12,7 +12,10 @@ AM_INIT_AUTOMAKE([no-define foreign subdir-objects])
 AC_PROG_CC
 
 m4_include([ax_pthread.m4])
-AX_PTHREAD
+AX_PTHREAD(
+    [AC_CHECK_HEADERS([pthread.h])],
+    [AC_MSG_WARN([No pthread support.])]
+)
 
 # Checks for libraries.
 AC_CHECK_LIB([iconv], [iconv])
