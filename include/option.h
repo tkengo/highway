@@ -25,6 +25,7 @@ typedef struct _hw_option {
     bool show_line_number;
     bool color;
     bool group;
+    bool buffering;
     bool stdout_redirect;
     bool stdin_redirect;
 } hw_option;

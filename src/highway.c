@@ -109,12 +109,15 @@ int main(int argc, char **argv)
     }
 
     int return_code = 0;
+
     if (op.stdin_redirect) {
-        setvbuf(stdout, NULL, _IONBF, 0);
         return_code = process_stdin();
+        setvbuf(stdout, NULL, _IONBF, 0);
     } else {
+        if (op.buffering) {
+            setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
+        }
         set_fd_rlimit(MAX_FD_NUM);
-        setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
         return_code = process_terminal();
     }
 

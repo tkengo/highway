@@ -41,6 +41,7 @@ void init_option(int argc, char **argv)
         { "no-color",          no_argument,       &flag, 6   },
         { "group",             no_argument,       &flag, 7   },
         { "no-group",          no_argument,       &flag, 8   },
+        { "no-buffering",      no_argument,       &flag, 9   },
         { 0, 0, 0, 0 }
     };
 
@@ -80,6 +81,7 @@ void init_option(int argc, char **argv)
     op.color             = 0;
 #endif
     op.group             = !op.stdout_redirect && !op.stdin_redirect;
+    op.buffering         = !op.stdin_redirect;
 
     int ch;
     bool show_version = false;
@@ -110,6 +112,9 @@ void init_option(int argc, char **argv)
                         break;
                     case 8: /* --no-group */
                         op.group = false;
+                        break;
+                    case 9: /* --no-buffering */
+                        op.buffering = false;
                         break;
                 }
                 break;
