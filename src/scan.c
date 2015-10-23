@@ -92,7 +92,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
 
     bool need_free = false;
     if (!op.all_files) {
-        sprintf(buf, "%s%s", base, ".gitignore");
+        sprintf(buf, "%s%s", base, GIT_IGNORE_NAME);
         if (access(buf, F_OK) == 0) {
             // Create search ignore list from the .gitignore file. New list is created if there are
             // not ignore file on upper directories, otherwise the list will be inherited.

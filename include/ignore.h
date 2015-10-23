@@ -5,6 +5,7 @@
 #include "file.h"
 
 #define IGNORE_TABLE_SIZE 256
+#define GIT_IGNORE_NAME ".gitignore"
 
 typedef struct _ignore_node ignore_node;
 

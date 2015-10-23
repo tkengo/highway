@@ -53,7 +53,7 @@ int process_terminal()
 
     ignore_hash *ignores = NULL;
     if (!op.has_dot_path) {
-        ignores = load_ignore_hash("", ".gitignore", 0);
+        ignores = load_ignore_hash("", GIT_IGNORE_NAME, 0);
     }
 
     // Scan target files recursively. If target files was found, they are added to the file queue,
