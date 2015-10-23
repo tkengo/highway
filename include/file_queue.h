@@ -24,7 +24,7 @@ struct _file_queue_node {
 struct _file_queue {
     file_queue_node *first;
     file_queue_node *last;
-    file_queue_node *current_for_search;
+    file_queue_node *current;
 };
 
 file_queue *create_file_queue();
