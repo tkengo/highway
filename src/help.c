@@ -31,6 +31,7 @@ void usage()
     u("      --no-color           No highlight.");
     u("      --group              Grouping matching lines every files.");
     u("      --no-group           No grouping.");
+    u("      --no-buffering       No buffering. By default results is buffering when printing.");
     u("      --no-omit            Show all characters even if too long lines were matched.");
     u("                           By default hw print only characters near by PATTERN if");
     u("                           the line was too long.");
