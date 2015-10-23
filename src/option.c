@@ -57,6 +57,7 @@ void init_option(int argc, char **argv)
 #endif
     op.root_paths[0]     = ".";
     op.paths_count       = 1;
+    op.has_dot_path      = true;
 #ifndef _WIN32
     op.omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);
 #else
@@ -197,6 +198,7 @@ void init_option(int argc, char **argv)
         paths_count = MAX_PATHS_COUNT;
     }
     if (paths_count > 0) {
+        op.has_dot_path = false;
         for (int i = 0; i < paths_count; i++) {
             char *path = argv[optind + i];
             int len = strlen(path);
@@ -204,6 +206,10 @@ void init_option(int argc, char **argv)
                 path[len - 1] = '\0';
             }
             op.root_paths[i] = path;
+
+            if (strcmp(path, ".") == 0) {
+                op.has_dot_path = true;
+            }
         }
         op.paths_count = paths_count;
     }

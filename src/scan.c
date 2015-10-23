@@ -41,7 +41,20 @@ bool is_skip_entry(const struct dirent *entry)
     return (ENTRY_ISDIR(entry) && (cur || up)) || hidden;
 }
 
-bool is_search_target(const struct dirent *entry)
+bool is_search_target_by_stat(const struct stat *st)
+{
+#ifndef _WIN32
+    if (op.follow_link) {
+        return S_ISREG(st->st_mode) || S_ISLNK(st->st_mode);
+    } else {
+        return S_ISREG(st->st_mode);
+    }
+#else
+    return 1;
+#endif
+}
+
+bool is_search_target_by_entry(const struct dirent *entry)
 {
 #ifndef _WIN32
     if (op.follow_link) {
@@ -54,40 +67,19 @@ bool is_search_target(const struct dirent *entry)
 #endif
 }
 
-DIR *open_dir_or_queue_file(file_queue *queue, const char *dir_path)
-{
-    // Open the path as a directory. If it is not a directory, check whether if it is a file,
-    // and then add the file to the queue if it is true.
-    DIR *dir = opendir(dir_path);
-    if (dir == NULL) {
-        int opendir_errno = errno;
-        struct stat st;
-        if (stat(dir_path, &st) == 0) {
-            if (S_ISDIR(st.st_mode)) {
-                if (opendir_errno == EMFILE) {
-                    log_w("Too many open files (%s). You might want to increase fd limit by `ulimit -n N`.", dir_path);
-                } else {
-                    log_w("%s can't be opend (errno: %d). You might want to search under the directory again.", opendir_errno, dir_path);
-                }
-            } else {
-                enqueue_file_exclusively(queue, dir_path);
-            }
-        } else {
-            log_w("'%s' can't be opened. Is there the directory or file on your current directory?", dir_path);
-        }
-    }
-
-    return dir;
-}
-
 /**
  * Find search target files recursively under the specified directories, and add filenames to the
  * queue used by search worker.
  */
 void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, int depth)
 {
-    DIR *dir = open_dir_or_queue_file(queue, dir_path);
+    DIR *dir = opendir(dir_path);
     if (dir == NULL) {
+        if (errno == EMFILE) {
+            log_w("Too many open files (%s). Try to increase fd limit by `ulimit -n N`.", dir_path);
+        } else {
+            log_w("%s can't be opend. %s (%d).", dir_path, strerror(errno), errno);
+        }
         return;
     }
 
@@ -141,7 +133,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
 
         if (ENTRY_ISDIR(entry)) {
             scan_target(queue, buf, ignores, depth + 1);
-        } else if (is_search_target(entry)) {
+        } else if (is_search_target_by_entry(entry)) {
             enqueue_file_exclusively(queue, buf);
         }
     }
