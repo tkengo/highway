@@ -29,6 +29,7 @@ void init_option(int argc, char **argv)
         { "file-with-matches", no_argument,       NULL,  'l' },
         { "line-number",       no_argument,       NULL,  'n' },
         { "word-regexp",       no_argument,       NULL,  'w' },
+        { "ext",               required_argument, NULL,  'x' },
         { "after-context",     required_argument, NULL,  'A' },
         { "before-context",    required_argument, NULL,  'B' },
         { "context",           required_argument, NULL,  'C' },
@@ -57,6 +58,7 @@ void init_option(int argc, char **argv)
 #endif
     op.root_paths[0]     = ".";
     op.paths_count       = 1;
+    op.ext_count         = 0;
     op.has_dot_path      = true;
 #ifndef _WIN32
     op.omit_threshold    = MAX(MIN_LINE_LENGTH, w.ws_col / 2);
@@ -86,7 +88,7 @@ void init_option(int argc, char **argv)
 
     int ch;
     bool show_version = false;
-    while ((ch = getopt_long(argc, argv, "aefhilnvwA:B:C:N", longopts, NULL)) != -1) {
+    while ((ch = getopt_long(argc, argv, "aefhilnvwx:A:B:C:N", longopts, NULL)) != -1) {
         switch (ch) {
             case 0:
                 switch (flag) {
@@ -154,6 +156,15 @@ void init_option(int argc, char **argv)
                 op.word_regex = true;
                 break;
 
+            case 'x': /* Extension */
+                if (op.ext_count == 0) {
+                    op.ext = (char **)hw_malloc(sizeof(char *));
+                } else {
+                    op.ext = (char **)hw_realloc(op.ext, sizeof(char *) * (op.ext_count + 1));
+                }
+                op.ext[op.ext_count++] = optarg;
+                break;
+
             case 'A': /* After context */
                 op.after_context = atoi(optarg);
                 break;
@@ -187,9 +198,7 @@ void init_option(int argc, char **argv)
         exit(1);
     }
 
-    char *pattern = argv[optind++];
-    op.pattern = (char *)hw_malloc(SIZE_OF_CHAR * (strlen(pattern) + 1));
-    strcpy(op.pattern, pattern);
+    op.pattern = argv[optind++];
 
     int paths_count = argc - optind;
     if (paths_count > MAX_PATHS_COUNT) {
@@ -217,5 +226,7 @@ void init_option(int argc, char **argv)
 
 void free_option()
 {
-    tc_free(op.pattern);
+    if (op.ext_count > 0) {
+        tc_free(op.ext);
+    }
 }

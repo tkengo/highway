@@ -24,7 +24,7 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
 
 /**
  * Check if the directory entry is ignored by the highway. The directory is ignored if it is the
- * current directory or upper directory or hidden directory(started directory name with dot `.`).
+ * current directory or upper directory or hidden directory (started directory name with dot `.`).
  */
 bool is_skip_entry(const struct dirent *entry)
 {
@@ -34,11 +34,29 @@ bool is_skip_entry(const struct dirent *entry)
     size_t len = strlen(entry->d_name);
 #endif
 
+    bool is_dir = ENTRY_ISDIR(entry);
     bool cur    = len == 1 && entry->d_name[0] == '.';
     bool up     = len == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool hidden = len  > 1 && entry->d_name[0] == '.' && !op.all_files;
 
-    return (ENTRY_ISDIR(entry) && (cur || up)) || hidden;
+    if ((is_dir && (cur || up)) || hidden) {
+        return true;
+    }
+
+    if (op.ext_count > 0 && !is_dir) {
+        char *ext = rindex(entry->d_name, '.');
+        if (ext && ext[1] != '\0') {
+            ext++;
+            for (int i = 0; i < op.ext_count; i++) {
+                if (strcmp(ext, op.ext[i]) == 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    return false;
 }
 
 bool is_search_target_by_stat(const struct stat *st)
