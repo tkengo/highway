@@ -116,7 +116,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
         sprintf(buf, "%s%s", base, entry->d_name);
 
         // Check whether if the file is ignored by gitignore. If it is ignored, skip finding.
-        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry, depth)) {
+        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
             continue;
         }
 
