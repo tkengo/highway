@@ -10,6 +10,9 @@
 #include "worker.h"
 #include "log.h"
 #include "util.h"
+#ifdef _WIN32
+#define rindex(x, y) strchr(x, y)
+#endif
 
 /**
  * Add a filename to the queue and launch the sleeping search worker.
