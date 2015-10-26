@@ -5,6 +5,7 @@
 #include "option.h"
 #include "util.h"
 #include "color.h"
+#include "hwmalloc.h"
 
 void print_filename(const char *filename)
 {
@@ -112,5 +113,7 @@ void print_result(file_queue_node *current)
             fputs(out, stdout);
         }
         putc('\n', stdout);
+        tc_free(match_line->line);
+        tc_free(match_line);
     }
 }
