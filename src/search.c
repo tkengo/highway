@@ -170,17 +170,17 @@ int format_line(const char *line,
 
     // Search the all of PATTERN in the line.
     while (search_by(line + offset, line_len - offset, pattern, pattern_len, t, &matches[match_count], thread_no)) {
-        // Two times memory will be reallocated if match size is not enough.
-        if (n <= match_count) {
-            n *= 2;
-            matches = (match *)hw_realloc(matches, sizeof(match) * n);
-        }
-
         matches[match_count].start += offset;
         matches[match_count].end   += offset;
         offset = matches[match_count].end;
 
         match_count++;
+
+        // Two times memory will be reallocated if match size is not enough.
+        if (n <= match_count) {
+            n *= 2;
+            matches = (match *)hw_realloc(matches, sizeof(match) * n);
+        }
     }
 
     // Allocate memory for colorized result string.
