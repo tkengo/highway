@@ -116,30 +116,38 @@ bool search_by(const char *buf,
     }
 }
 
-void format_match_string(char *line, const char *buf, match *m, int old_end, int index)
+void format_line_middle(char *line, const char *buf, size_t len, enum append_type type)
 {
-    int prefix_len = m->start - old_end;
-
-    if (!op.no_omit && prefix_len > op.omit_threshold) {
-        if (index == 0) {
-            int rest_len = op.omit_threshold - DOT_LENGTH;
-            APPEND_DOT(op.color, line);
-            strncat(line, buf + prefix_len - rest_len, rest_len);
-        } else {
-            int rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
-            strncat(line, buf, rest_len);
-            APPEND_DOT(op.color, line);
-            strncat(line, buf + prefix_len - rest_len, rest_len);
-        }
-    } else {
-        strncat(line, buf, prefix_len);
+    if (len == 0) {
+        return;
     }
 
-    strncat_with_color(line, buf + prefix_len, m->end - m->start, op.color_match);
+    if (!op.no_omit && len > op.omit_threshold) {
+        size_t rest_len;
+        switch (type) {
+            case AT_FIRST:
+                rest_len = op.omit_threshold - DOT_LENGTH;
+                APPEND_DOT(op.color, line);
+                strncat(line, buf + len - rest_len, rest_len);
+                break;
+            case AT_MIDDLE:
+                rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
+                strncat(line, buf, rest_len);
+                APPEND_DOT(op.color, line);
+                strncat(line, buf + len - rest_len, rest_len);
+                break;
+            case AT_LAST:
+                strncat(line, buf, op.omit_threshold - DOT_LENGTH);
+                APPEND_DOT(op.color, line);
+                break;
+        }
+    } else {
+        strncat(line, buf, len);
+    }
 }
 
 /**
- * Search PATTERN from the line and format them.
+ * Search PATTERN from the line and format.
  */
 int format_line(const char *line,
                 size_t line_len,
@@ -185,22 +193,24 @@ int format_line(const char *line,
     const char *start = line;
     int old_end = 0;
     for (int i = 0; i < match_count; i++) {
-        format_match_string(node->line, start, &matches[i], old_end, i);
+        /* format_match_string(node->line, start, &matches[i], old_end, i); */
+        match m = matches[i];
 
-        start += matches[i].end - old_end;
-        old_end = matches[i].end;
+        // Append prefix string.
+        int prefix_len = m.start - old_end;
+        format_line_middle(node->line, start, prefix_len, i == 0 ? AT_FIRST : AT_MIDDLE);
+
+        // Append matching word with color.
+        strncat_with_color(node->line, start + prefix_len, m.end - m.start, op.color_match);
+
+        start += m.end - old_end;
+        old_end = m.end;
     }
 
-    int last_end = matches[match_count - 1].end;
-    int suffix_len = line_len - last_end;
-    if (!op.stdout_redirect && !op.no_omit && suffix_len > op.omit_threshold) {
-        strncat(node->line, start, op.omit_threshold - DOT_LENGTH);
-        APPEND_DOT(op.color, node->line);
-    } else {
-        strncat(node->line, start, line_len - last_end);
-    }
+    // Append suffix string.
+    format_line_middle(node->line, start, line_len - matches[match_count - 1].end, AT_LAST);
+
     enqueue_match_line(match_lines, node);
-
     tc_free(matches);
 
     return match_count;
