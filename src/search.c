@@ -135,15 +135,7 @@ void format_match_string(char *line, const char *buf, match *m, int old_end, int
         strncat(line, buf, prefix_len);
     }
 
-    if (op.color) {
-        strcat(line, MATCH_WORD_COLOR);
-    }
-
-    strncat(line, buf + prefix_len, m->end - m->start);
-
-    if (op.color) {
-        strcat(line, RESET_COLOR);
-    }
+    strncat_with_color(line, buf + prefix_len, m->end - m->start, op.color_match);
 }
 
 /**
@@ -184,7 +176,7 @@ int format_line(const char *line,
     }
 
     // Allocate memory for colorized result string.
-    int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
+    int buffer_len = line_len + (op.color_match_len + OMIT_ESCAPE_LEN) * match_count;
     match_line_node *node = (match_line_node *)hw_malloc(sizeof(match_line_node));
     node->line_no = line_no;
     node->context = CONTEXT_NONE;

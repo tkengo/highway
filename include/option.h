@@ -9,9 +9,15 @@
 typedef struct _hw_option {
     char *root_paths[MAX_PATHS_COUNT]; /* path list for searching */
     int paths_count;                   /* path count above list */
+    char *pattern;
     char **ext;
     int ext_count;
-    char *pattern;
+    char color_path[24];
+    char color_match[24];
+    char color_line_number[24];
+    char color_before_context[24];
+    char color_after_context[24];
+    int color_match_len;
     int worker;
     int omit_threshold;
     int after_context;

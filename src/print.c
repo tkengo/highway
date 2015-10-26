@@ -12,11 +12,7 @@ void print_filename(const char *filename)
         return;
     }
 
-    if (op.color) {
-        printf("%s%s%s", FILENAME_COLOR, filename, RESET_COLOR);
-    } else {
-        fputs(filename, stdout);
-    }
+    puts_with_color(filename, op.color_path);
 
     if (op.file_with_matches || op.group) {
         putc('\n', stdout);
@@ -27,51 +23,29 @@ void print_filename(const char *filename)
 
 void print_line_number(match_line_node *match_line, int max_digit)
 {
-    if (op.color) {
-        // Print colorized line number.
-        switch (match_line->context) {
-            case CONTEXT_NONE:
-                if (op.group) {
-                    printf("%s%*d%s", LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
-                } else {
-                    printf("%s%d%s", LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
-                }
-                break;
-            case CONTEXT_BEFORE:
-                if (op.group) {
-                    printf("%s%*d%s", CONTEXT_BEFORE_LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
-                } else {
-                    printf("%s%d%s", CONTEXT_BEFORE_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
-                }
-                break;
-            case CONTEXT_AFTER:
-                if (op.group) {
-                    printf("%s%*d%s", CONTEXT_AFTER_LINE_NO_COLOR, max_digit, match_line->line_no, RESET_COLOR);
-                } else {
-                    printf("%s%d%s", CONTEXT_AFTER_LINE_NO_COLOR, match_line->line_no, RESET_COLOR);
-                }
-                break;
-        }
-    } else {
-        // Print no-colorized line number.
-        if (op.group) {
-            printf("%*d", max_digit, match_line->line_no);
-        } else {
-            printf("%d", match_line->line_no);
-        }
-    }
-
+    char *color, sep;
     switch (match_line->context) {
         case CONTEXT_NONE:
-            putc(':', stdout);
+            color = op.color_line_number;
+            sep = ':';
             break;
         case CONTEXT_BEFORE:
-            putc('-', stdout);
+            color = op.color_before_context;
+            sep = '-';
             break;
         case CONTEXT_AFTER:
-            putc('-', stdout);
+            color = op.color_after_context;
+            sep = '-';
             break;
     }
+
+    if (op.group) {
+        printf_with_color("%*d", color, max_digit, match_line->line_no);
+    } else {
+        printf_with_color("%d", color, match_line->line_no);
+    }
+
+    putc(sep, stdout);
 }
 
 void print_result(file_queue_node *current)
