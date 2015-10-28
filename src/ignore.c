@@ -94,6 +94,7 @@ ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *
         }
         add_ignore_node(hash, base, buf, depth);
     }
+    fclose(fp);
 
     return hash;
 }
