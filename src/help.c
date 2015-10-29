@@ -44,9 +44,9 @@ void usage()
     u("      --color-after-context  Color for line numbers of the after context.");
     u("");
     u("Context control:");
-    u("  -A, --after-context=NUM    Print NUM lines after match.");
-    u("  -B, --before-context=NUM   Print NUM lines before match.");
-    u("  -C, --context=NUM          Print NUM lines before and after matches.");
+    u("  -A, --after-context        Print some lines after match.");
+    u("  -B, --before-context       Print some lines before match.");
+    u("  -C, --context              Print some lines before and after matches.");
     u("");
     u("  -h, --help                 Show options help and some concept guides.");
     u("      --version              Show version.");
