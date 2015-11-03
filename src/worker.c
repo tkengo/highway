@@ -65,16 +65,16 @@ void *print_worker(void *arg)
     pthread_mutex_lock(&print_mutex);
     while (queue->first == NULL) {
         if (is_complete_scan_file()) {
+            // If the file queue is empty after scanning files, it will do nothing.
+            if (queue->first == NULL) {
+                pthread_mutex_unlock(&print_mutex);
+                return NULL;
+            }
             break;
         }
         pthread_cond_wait(&print_cond, &print_mutex);
     }
     pthread_mutex_unlock(&print_mutex);
-
-    // If the file queue is empty, it will do nothing.
-    if (queue->first == NULL) {
-        return NULL;
-    }
 
     file_queue_node *current = queue->first;
     file_queue_node *prev = NULL;
