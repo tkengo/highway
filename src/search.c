@@ -116,38 +116,38 @@ bool search_by(const char *buf,
     }
 }
 
-void format_match_string(char *line, const char *buf, match *m, int old_end, int index)
+void format_line_middle(char *line, const char *buf, size_t len, enum append_type type)
 {
-    int prefix_len = m->start - old_end;
+    if (len == 0) {
+        return;
+    }
 
-    if (!op.no_omit && prefix_len > op.omit_threshold) {
-        if (index == 0) {
-            int rest_len = op.omit_threshold - DOT_LENGTH;
-            APPEND_DOT(op.color, line);
-            strncat(line, buf + prefix_len - rest_len, rest_len);
-        } else {
-            int rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
-            strncat(line, buf, rest_len);
-            APPEND_DOT(op.color, line);
-            strncat(line, buf + prefix_len - rest_len, rest_len);
+    if (!op.no_omit && len > op.omit_threshold) {
+        size_t rest_len;
+        switch (type) {
+            case AT_FIRST:
+                rest_len = op.omit_threshold - DOT_LENGTH;
+                APPEND_DOT(op.color, line);
+                strncat(line, buf + len - rest_len, rest_len);
+                break;
+            case AT_MIDDLE:
+                rest_len = (op.omit_threshold - DOT_LENGTH) / 2;
+                strncat(line, buf, rest_len);
+                APPEND_DOT(op.color, line);
+                strncat(line, buf + len - rest_len, rest_len);
+                break;
+            case AT_LAST:
+                strncat(line, buf, op.omit_threshold - DOT_LENGTH);
+                APPEND_DOT(op.color, line);
+                break;
         }
     } else {
-        strncat(line, buf, prefix_len);
-    }
-
-    if (op.color) {
-        strcat(line, MATCH_WORD_COLOR);
-    }
-
-    strncat(line, buf + prefix_len, m->end - m->start);
-
-    if (op.color) {
-        strcat(line, RESET_COLOR);
+        strncat(line, buf, len);
     }
 }
 
 /**
- * Search PATTERN from the line and format them.
+ * Search PATTERN from the line and format.
  */
 int format_line(const char *line,
                 size_t line_len,
@@ -184,7 +184,7 @@ int format_line(const char *line,
     }
 
     // Allocate memory for colorized result string.
-    int buffer_len = line_len + (MATCH_WORD_ESCAPE_LEN + OMIT_ESCAPE_LEN) * match_count;
+    int buffer_len = line_len + (op.color_match_len + OMIT_ESCAPE_LEN) * match_count;
     match_line_node *node = (match_line_node *)hw_malloc(sizeof(match_line_node));
     node->line_no = line_no;
     node->context = CONTEXT_NONE;
@@ -193,22 +193,24 @@ int format_line(const char *line,
     const char *start = line;
     int old_end = 0;
     for (int i = 0; i < match_count; i++) {
-        format_match_string(node->line, start, &matches[i], old_end, i);
+        /* format_match_string(node->line, start, &matches[i], old_end, i); */
+        match m = matches[i];
 
-        start += matches[i].end - old_end;
-        old_end = matches[i].end;
+        // Append prefix string.
+        int prefix_len = m.start - old_end;
+        format_line_middle(node->line, start, prefix_len, i == 0 ? AT_FIRST : AT_MIDDLE);
+
+        // Append matching word with color.
+        strncat_with_color(node->line, start + prefix_len, m.end - m.start, op.color_match);
+
+        start += m.end - old_end;
+        old_end = m.end;
     }
 
-    int last_end = matches[match_count - 1].end;
-    int suffix_len = line_len - last_end;
-    if (!op.stdout_redirect && !op.no_omit && suffix_len > op.omit_threshold) {
-        strncat(node->line, start, op.omit_threshold - DOT_LENGTH);
-        APPEND_DOT(op.color, node->line);
-    } else {
-        strncat(node->line, start, line_len - last_end);
-    }
+    // Append suffix string.
+    format_line_middle(node->line, start, line_len - matches[match_count - 1].end, AT_LAST);
+
     enqueue_match_line(match_lines, node);
-
     tc_free(matches);
 
     return match_count;
@@ -399,31 +401,38 @@ int search(int fd,
     int buf_offset = 0;
     int match_count = 0;
     bool do_search = false;
-    char *buf = (char *)hw_calloc(n, SIZE_OF_CHAR);
+    char *buf = (char *)hw_calloc(n + 1, SIZE_OF_CHAR);
     char *last_new_line_scan_pos = buf;
+    char *last_line_end;
 
     if (!op.use_regex) {
         prepare_fjs(pattern, pattern_len, t);
     }
 
-do_search:
     while ((read_len = read(fd, buf + buf_offset, NMAX)) > 0) {
         read_sum += read_len;
 
         // Search end position of the last line in the buffer. We search from the first position
         // and end position of the last line.
-        char *last_line_end = reverse_char(buf + buf_offset, eol, read_len);
-        if (last_line_end == NULL) {
-            buf = last_new_line_scan_pos = grow_buf_if_shortage(&n, read_sum, buf_offset, buf, buf);
-            buf_offset += read_len;
-            continue;
+        size_t search_len;
+        if (read_len < NMAX) {
+            last_line_end = buf + read_sum;
+            search_len = read_sum;
+            buf[read_sum] = eol;
+        } else {
+            last_line_end = reverse_char(buf + buf_offset, eol, read_len);
+            if (last_line_end == NULL) {
+                buf = last_new_line_scan_pos = grow_buf_if_shortage(&n, read_sum, buf_offset, buf, buf);
+                buf_offset += read_len;
+                continue;
+            }
+            search_len = last_line_end - buf;
         }
 
         do_search = true;
 
         // Search the pattern and construct matching results. The results will be stored to list
         // `match_lines`.
-        size_t search_len = last_line_end - buf;
         int count = search_buffer(
             buf,
             search_len,
@@ -462,25 +471,18 @@ do_search:
         }
         last_line_end++;
 
-        size_t rest = read_sum - search_len - 1;
-        char *new_buf = grow_buf_if_shortage(&n, rest, 0, last_line_end, buf);
-        if (new_buf == last_line_end) {
-            new_buf = buf;
-            memmove(new_buf, last_line_end, rest);
+        ssize_t rest = read_sum - search_len - 1;
+        if (rest >= 0) {
+            char *new_buf = grow_buf_if_shortage(&n, rest, 0, last_line_end, buf);
+            if (new_buf == last_line_end) {
+                new_buf = buf;
+                memmove(new_buf, last_line_end, rest);
+            }
+            buf = last_new_line_scan_pos = new_buf;
+
+            buf_offset = rest;
+            read_sum = rest;
         }
-        buf = last_new_line_scan_pos = new_buf;
-
-        buf_offset = rest;
-        read_sum = rest;
-    }
-
-    // If there is no new line in the file, we try to search again by '\r' from the head of the
-    // file. And also if there is no '\r' in the file, we will skip this file.
-    if (read_len > 0 && !do_search && eol == '\n') {
-        eol = '\r';
-        read_sum = buf_offset = 0;
-        lseek(fd, 0, SEEK_SET);
-        goto do_search;
     }
 
     tc_free(buf);

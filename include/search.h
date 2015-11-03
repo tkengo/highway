@@ -15,6 +15,12 @@ typedef struct _match {
     int line_end;
 } match;
 
+enum append_type {
+    AT_FIRST = 0,
+    AT_MIDDLE,
+    AT_LAST
+};
+
 #include "file.h"
 #include "file_queue.h"
 #include "option.h"

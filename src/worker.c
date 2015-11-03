@@ -65,19 +65,19 @@ void *print_worker(void *arg)
     pthread_mutex_lock(&print_mutex);
     while (queue->first == NULL) {
         if (is_complete_scan_file()) {
+            // If the file queue is empty after scanning files, it will do nothing.
+            if (queue->first == NULL) {
+                pthread_mutex_unlock(&print_mutex);
+                return NULL;
+            }
             break;
         }
         pthread_cond_wait(&print_cond, &print_mutex);
     }
     pthread_mutex_unlock(&print_mutex);
 
-    // If the file queue is empty, it will do nothing.
-    if (queue->first == NULL) {
-        return NULL;
-    }
-
     file_queue_node *current = queue->first;
-    file_queue_node *prev = current->prev;
+    file_queue_node *prev = NULL;
     while (1) {
         // This worker takes out a print target file from the queue. If the queue is empty, worker
         // will be waiting until find at least one target print file.
@@ -109,7 +109,7 @@ void *print_worker(void *arg)
         // Current node is used on scaning target, so it should not release it's memory now.
         // Therefore release memory of the previous node because it is no longer used in the
         // future.
-        if (current->prev) {
+        if (current->prev != NULL) {
             tc_free(current->prev);
         }
 

@@ -2,8 +2,11 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
 #include "highway.h"
 #include "hwmalloc.h"
+#include "scan.h"
 #include "worker.h"
 #include "scan.h"
 #include "option.h"
@@ -48,10 +51,25 @@ int process_terminal()
     }
     log_d("Worker num: %d", op.worker);
 
+    ignore_hash *ignores = NULL;
+    if (!op.has_dot_path) {
+        ignores = load_ignore_hash("", GIT_IGNORE_NAME, 0);
+    }
+
     // Scan target files recursively. If target files was found, they are added to the file queue,
     // and then search worker will take items from the queue and do searching.
+    struct stat st;
     for (int i = 0; i < op.paths_count; i++) {
-        scan_target(queue, op.root_paths[i], NULL, 0);
+        char *path = op.root_paths[i];
+        if (stat(path, &st) == 0) {
+            if (S_ISDIR(st.st_mode)) {
+                scan_target(queue, path, strcmp(path, ".") == 0 ? NULL : ignores, 0);
+            } else if (is_search_target_by_stat(&st)) {
+                enqueue_file_exclusively(queue, path);
+            }
+        } else {
+            log_w("'%s' can't be opened. %s (%d)", path, strerror(errno), errno);
+        }
     }
     complete_scan_file = true;
     pthread_cond_broadcast(&file_cond);
@@ -109,12 +127,15 @@ int main(int argc, char **argv)
     }
 
     int return_code = 0;
+
     if (op.stdin_redirect) {
         setvbuf(stdout, NULL, _IONBF, 0);
         return_code = process_stdin();
     } else {
+        if (op.buffering) {
+            setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
+        }
         set_fd_rlimit(MAX_FD_NUM);
-        setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
         return_code = process_terminal();
     }
 

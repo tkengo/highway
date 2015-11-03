@@ -137,7 +137,7 @@ bool match_path(ignore_node *node, const char *path, const struct dirent *entry)
     return false;
 }
 
-bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, int depth)
+bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry)
 {
     if (match_path(hash->accept, path, entry)) {
         return false;
@@ -145,15 +145,17 @@ bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry, 
 
     ignore_node *node;
 
-    char *ext = rindex(path, '.');
-    if (ext && ext[1] != '\0') {
-        ext++;
-        node = hash->ext[(unsigned char)ext[0]];
-        while (node) {
-            if (strcmp(ext, node->name) == 0) {
-                return true;
+    if (!ENTRY_ISDIR(entry)) {
+        char *ext = rindex(path, '.');
+        if (ext && ext[1] != '\0') {
+            ext++;
+            node = hash->ext[(unsigned char)ext[0]];
+            while (node) {
+                if (strcmp(ext, node->name) == 0) {
+                    return true;
+                }
+                node = node->next;
             }
-            node = node->next;
         }
     }
 

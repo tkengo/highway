@@ -10,6 +10,9 @@
 #include "worker.h"
 #include "log.h"
 #include "util.h"
+#ifdef _WIN32
+#define rindex(x, y) strchr(x, y)
+#endif
 
 /**
  * Add a filename to the queue and launch the sleeping search worker.
@@ -24,7 +27,7 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
 
 /**
  * Check if the directory entry is ignored by the highway. The directory is ignored if it is the
- * current directory or upper directory or hidden directory(started directory name with dot `.`).
+ * current directory or upper directory or hidden directory (started directory name with dot `.`).
  */
 bool is_skip_entry(const struct dirent *entry)
 {
@@ -34,14 +37,45 @@ bool is_skip_entry(const struct dirent *entry)
     size_t len = strlen(entry->d_name);
 #endif
 
+    bool is_dir = ENTRY_ISDIR(entry);
     bool cur    = len == 1 && entry->d_name[0] == '.';
     bool up     = len == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool hidden = len  > 1 && entry->d_name[0] == '.' && !op.all_files;
 
-    return (ENTRY_ISDIR(entry) && (cur || up)) || hidden;
+    if ((is_dir && (cur || up)) || hidden) {
+        return true;
+    }
+
+    if (op.ext_count > 0 && !is_dir) {
+        char *ext = rindex(entry->d_name, '.');
+        if (ext && ext[1] != '\0') {
+            ext++;
+            for (int i = 0; i < op.ext_count; i++) {
+                if (strcmp(ext, op.ext[i]) == 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    return false;
 }
 
-bool is_search_target(const struct dirent *entry)
+bool is_search_target_by_stat(const struct stat *st)
+{
+#ifndef _WIN32
+    if (op.follow_link) {
+        return S_ISREG(st->st_mode) || S_ISLNK(st->st_mode);
+    } else {
+        return S_ISREG(st->st_mode);
+    }
+#else
+    return 1;
+#endif
+}
+
+bool is_search_target_by_entry(const struct dirent *entry)
 {
 #ifndef _WIN32
     if (op.follow_link) {
@@ -54,40 +88,19 @@ bool is_search_target(const struct dirent *entry)
 #endif
 }
 
-DIR *open_dir_or_queue_file(file_queue *queue, const char *dir_path)
-{
-    // Open the path as a directory. If it is not a directory, check whether if it is a file,
-    // and then add the file to the queue if it is true.
-    DIR *dir = opendir(dir_path);
-    if (dir == NULL) {
-        int opendir_errno = errno;
-        struct stat st;
-        if (stat(dir_path, &st) == 0) {
-            if (S_ISDIR(st.st_mode)) {
-                if (opendir_errno == EMFILE) {
-                    log_w("Too many open files (%s). You might want to increase fd limit by `ulimit -n N`.", dir_path);
-                } else {
-                    log_w("%s can't be opend (errno: %d). You might want to search under the directory again.", opendir_errno, dir_path);
-                }
-            } else {
-                enqueue_file_exclusively(queue, dir_path);
-            }
-        } else {
-            log_w("'%s' can't be opened. Is there the directory or file on your current directory?", dir_path);
-        }
-    }
-
-    return dir;
-}
-
 /**
  * Find search target files recursively under the specified directories, and add filenames to the
  * queue used by search worker.
  */
 void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, int depth)
 {
-    DIR *dir = open_dir_or_queue_file(queue, dir_path);
+    DIR *dir = opendir(dir_path);
     if (dir == NULL) {
+        if (errno == EMFILE) {
+            log_w("Too many open files (%s). Try to increase fd limit by `ulimit -n N`.", dir_path);
+        } else {
+            log_w("%s can't be opend. %s (%d).", dir_path, strerror(errno), errno);
+        }
         return;
     }
 
@@ -100,7 +113,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
 
     bool need_free = false;
     if (!op.all_files) {
-        sprintf(buf, "%s%s", base, ".gitignore");
+        sprintf(buf, "%s%s", base, GIT_IGNORE_NAME);
         if (access(buf, F_OK) == 0) {
             // Create search ignore list from the .gitignore file. New list is created if there are
             // not ignore file on upper directories, otherwise the list will be inherited.
@@ -124,7 +137,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
         sprintf(buf, "%s%s", base, entry->d_name);
 
         // Check whether if the file is ignored by gitignore. If it is ignored, skip finding.
-        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry, depth)) {
+        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
             continue;
         }
 
@@ -141,7 +154,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
 
         if (ENTRY_ISDIR(entry)) {
             scan_target(queue, buf, ignores, depth + 1);
-        } else if (is_search_target(entry)) {
+        } else if (is_search_target_by_entry(entry)) {
             enqueue_file_exclusively(queue, buf);
         }
     }
