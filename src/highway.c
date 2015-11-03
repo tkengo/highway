@@ -129,8 +129,8 @@ int main(int argc, char **argv)
     int return_code = 0;
 
     if (op.stdin_redirect) {
-        return_code = process_stdin();
         setvbuf(stdout, NULL, _IONBF, 0);
+        return_code = process_stdin();
     } else {
         if (op.buffering) {
             setvbuf(stdout, NULL, _IOFBF, 1024 * 64);
