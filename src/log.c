@@ -96,7 +96,8 @@ void log_flush()
     while (fgets(buf, BUF_SIZE, log_buffer_fd) != NULL) {
         printf("%s", buf);
     }
-    fclose(log_buffer_fd);
+    if (log_buffer_fd != stderr)
+        fclose(log_buffer_fd);
     log_buffer_fd = NULL;
     pthread_mutex_destroy(&log_mutex);
 }

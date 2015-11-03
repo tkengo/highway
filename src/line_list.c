@@ -6,6 +6,7 @@ match_line_list *create_match_line_list()
     match_line_list *list = (match_line_list *)hw_malloc(sizeof(match_line_list));
     list->first = NULL;
     list->last  = NULL;
+    list->current_for_search = NULL;
     list->max_line_no = 1;
     return list;
 }
@@ -20,6 +21,7 @@ match_line_node *enqueue_match_line(match_line_list *list, match_line_node *node
     } else {
         list->first = node;
         list->last  = node;
+        list->current_for_search = node;
     }
 
     return node;
@@ -27,10 +29,10 @@ match_line_node *enqueue_match_line(match_line_list *list, match_line_node *node
 
 match_line_node *dequeue_match_line(match_line_list *list)
 {
-    if (list->first) {
-        match_line_node *first = list->first;
-        list->first = first->next;
-        return first;
+    if (list->current_for_search) {
+        match_line_node *current_for_search = list->current_for_search;
+        list->current_for_search = current_for_search->next;
+        return current_for_search;
     } else {
         return NULL;
     }
@@ -47,6 +49,7 @@ void clear_line_list(match_line_list *list) {
 
     list->first = NULL;
     list->last  = NULL;
+    list->current_for_search = NULL;
     list->max_line_no = 1;
 }
 

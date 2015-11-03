@@ -97,6 +97,8 @@ void close_iconv()
 {
     iconv_close(euc_ic);
     iconv_close(sjis_ic);
+    iconv_close(utf8_euc_ic);
+    iconv_close(utf8_sjis_ic);
 }
 
 void to_euc(char *in, size_t nin, char *out, size_t nout)
