@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <locale.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -42,7 +43,7 @@ int process_terminal()
         }
     }
 
-    // Launch one threads for printing result.
+    // Launch one thread for printing result.
     worker_params print_params = { op.worker, queue };
     if ((r = pthread_create(&pth, NULL, (void *)print_worker, (void *)&print_params)) != 0) {
         tc_free(queue);
@@ -121,6 +122,7 @@ int main(int argc, char **argv)
     }
 
     init_iconv();
+    setlocale(LC_ALL, "");
 
     if (op.use_regex && !onig_init_wrap()) {
         return 1;
