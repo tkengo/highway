@@ -17,6 +17,7 @@
 #include "worker.h"
 #include "util.h"
 #include "regex.h"
+#include "file.h"
 
 static bool complete_scan_file = false;
 
@@ -97,7 +98,7 @@ int process_stdin()
 {
     char *pattern = op.pattern;
     int pattern_len = strlen(op.pattern);
-    enum file_type t = FILE_TYPE_UTF8;
+    enum file_type t = locale_enc();
 
     if (!op.use_regex) {
         prepare_fjs(pattern, pattern_len, t);

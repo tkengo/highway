@@ -12,11 +12,13 @@ enum file_type {
     FILE_TYPE_BINARY = -1,
     FILE_TYPE_SHIFT_JIS,
     FILE_TYPE_EUC_JP,
-    FILE_TYPE_UTF8
+    FILE_TYPE_UTF8,
+    FILE_TYPE_UNKNOWN
 };
 
 #include "file_queue.h"
 
 enum file_type detect_file_type(int fd, const char *filename);
+enum file_type locale_enc();
 
 #endif // HW_FILE_H

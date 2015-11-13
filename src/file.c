@@ -14,10 +14,6 @@
  */
 enum file_type detect_file_type(int fd, const char *filename)
 {
-    if (op.stdin_redirect) {
-        return FILE_TYPE_UTF8;
-    }
-
     // Read the file content only 512-bytes from the header in order to improve speed of the
     // encoding detection. The detection accuracy of this method is not perfect but fast.
     char buf[BUF_SIZE_FOR_FILE_TYPE_CHECK];
@@ -127,4 +123,39 @@ enum file_type detect_file_type(int fd, const char *filename)
     } else {
         return FILE_TYPE_UTF8;
     }
+}
+
+enum file_type locale_enc()
+{
+    static enum file_type t = FILE_TYPE_UNKNOWN;
+
+    if (t != FILE_TYPE_UNKNOWN) {
+        return t;
+    }
+
+    const char *locale = getenv("LC_ALL");
+    if (locale == NULL || locale[0] == '\0') {
+        locale = getenv("LC_CTYPE");
+        if (locale == NULL || locale[0] == '\0') {
+            locale = getenv("LANG");
+        }
+    }
+
+    if (locale != NULL && locale[0] != '\0') {
+        const char *enc = strchr(locale, '.');
+        if (enc != NULL && enc[0] != '\0') {
+            enc++;
+            if (strcmp(enc, "UTF-8") == 0) {
+                t = FILE_TYPE_UTF8;
+            } else if (strcmp(enc, "eucJP") == 0) {
+                t = FILE_TYPE_EUC_JP;
+            } else if (strcmp(enc, "SJIS") == 0) {
+                t = FILE_TYPE_SHIFT_JIS;
+            }
+        }
+    } else {
+        t = FILE_TYPE_UTF8;
+    }
+
+    return t;
 }

@@ -72,7 +72,7 @@ void print_result(file_queue_node *current)
             print_line_number(match_line, max_digit);
         }
 
-        if (current->t == FILE_TYPE_UTF8) {
+        if (current->t == locale_enc()) {
             fputs(match_line->line, stdout);
         } else {
             const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
