@@ -100,10 +100,6 @@ int process_stdin()
     int pattern_len = strlen(op.pattern);
     enum file_type t = locale_enc();
 
-    if (!op.use_regex) {
-        prepare_fjs(pattern, pattern_len, t);
-    }
-
     match_line_list *match_lines = create_match_line_list();
     search(STDIN_FILENO, pattern, pattern_len, t, match_lines, 0);
     free_match_line_list(match_lines);
