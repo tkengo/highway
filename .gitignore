@@ -1,6 +1,6 @@
 /hw
 /tmp
-/sample
+/sample*
 /include/config.h*
 /include/stamp-h1
 /Makefile
