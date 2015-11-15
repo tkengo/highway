@@ -48,6 +48,32 @@ void print_line_number(match_line_node *match_line, int max_digit)
     putc(sep, stdout);
 }
 
+void print_line(const char *filename, enum file_type t, match_line_node *match_line, int max_digit)
+{
+    if (!op.group) {
+        print_filename(filename);
+    }
+
+    if (op.show_line_number) {
+        print_line_number(match_line, max_digit);
+    }
+
+    if (t == locale_enc()) {
+        fputs(match_line->line, stdout);
+    } else {
+        const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
+        char out[utf8_len_guess];
+        memset(out, 0, utf8_len_guess);
+        if (t == FILE_TYPE_EUC_JP) {
+            to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
+        } else if (t == FILE_TYPE_SHIFT_JIS) {
+            to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
+        }
+        fputs(out, stdout);
+    }
+    putc('\n', stdout);
+}
+
 void print_result(file_queue_node *current)
 {
     if (op.file_with_matches || op.group) {
@@ -64,27 +90,28 @@ void print_result(file_queue_node *current)
 
     // Show all matched line on console in the current file.
     while ((match_line = dequeue_match_line(current->match_lines)) != NULL) {
-        if (!op.group) {
-            print_filename(current->filename);
-        }
-
-        if (op.show_line_number) {
-            print_line_number(match_line, max_digit);
-        }
-
-        if (current->t == locale_enc()) {
-            fputs(match_line->line, stdout);
-        } else {
-            const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2;
-            char out[utf8_len_guess];
-            memset(out, 0, utf8_len_guess);
-            if (current->t == FILE_TYPE_EUC_JP) {
-                to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess);
-            } else if (current->t == FILE_TYPE_SHIFT_JIS) {
-                to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess);
-            }
-            fputs(out, stdout);
-        }
-        putc('\n', stdout);
+        print_line(current->filename, current->t, match_line, max_digit);
+        /* if (!op.group) { */
+        /*     print_filename(current->filename); */
+        /* } */
+        /*  */
+        /* if (op.show_line_number) { */
+        /*     print_line_number(match_line, max_digit); */
+        /* } */
+        /*  */
+        /* if (current->t == locale_enc()) { */
+        /*     fputs(match_line->line, stdout); */
+        /* } else { */
+        /*     const int line_len = strlen(match_line->line), utf8_len_guess = line_len * 2; */
+        /*     char out[utf8_len_guess]; */
+        /*     memset(out, 0, utf8_len_guess); */
+        /*     if (current->t == FILE_TYPE_EUC_JP) { */
+        /*         to_utf8_from_euc(match_line->line, line_len, out, utf8_len_guess); */
+        /*     } else if (current->t == FILE_TYPE_SHIFT_JIS) { */
+        /*         to_utf8_from_sjis(match_line->line, line_len, out, utf8_len_guess); */
+        /*     } */
+        /*     fputs(out, stdout); */
+        /* } */
+        /* putc('\n', stdout); */
     }
 }

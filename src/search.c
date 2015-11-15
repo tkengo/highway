@@ -210,7 +210,12 @@ int format_line(const char *line,
     // Append suffix string.
     format_line_middle(node->line, start, line_len - matches[match_count - 1].end, AT_LAST);
 
-    enqueue_match_line(match_lines, node);
+    if (match_lines == NULL) {
+        print_line(NULL, t, node, 1);
+    } else {
+        enqueue_match_line(match_lines, node);
+    }
+
     tc_free(matches);
 
     return match_count;
@@ -221,6 +226,7 @@ void before_context(const char *buf,
                     const char *last_match_line_end_pos,
                     int line_no,
                     match_line_list *match_lines,
+                    enum file_type t,
                     char eol)
 {
     int lim = MAX(op.context, op.before_context);
@@ -254,7 +260,12 @@ void before_context(const char *buf,
         } else {
             strncat(node->line, lines[i], line_len);
         }
-        enqueue_match_line(match_lines, node);
+
+        if (match_lines == NULL) {
+            print_line(NULL, t, node, 1);
+        } else {
+            enqueue_match_line(match_lines, node);
+        }
     }
 }
 
@@ -266,6 +277,7 @@ const char *after_context(const char *next_line_head,
                           ssize_t rest_len,
                           int line_no,
                           match_line_list *match_lines,
+                          enum file_type t,
                           char eol,
                           int *count)
 {
@@ -298,7 +310,11 @@ const char *after_context(const char *next_line_head,
             strncat(node->line, current, line_len);
         }
 
-        enqueue_match_line(match_lines, node);
+        if (match_lines == NULL) {
+            print_line(NULL, t, node, 1);
+        } else {
+            enqueue_match_line(match_lines, node);
+        }
         (*count)++;
 
         rest_len -= after_line - current + 1;
@@ -341,7 +357,7 @@ int search_buffer(const char *buf,
         // Collect after context.
         const char *last_line_end_by_after = p;
         if (match_count > 0 && (op.after_context > 0 || op.context > 0)) {
-            last_line_end_by_after = after_context(line_head, p, search_len, *line_count, match_lines, eol, &after_count);
+            last_line_end_by_after = after_context(line_head, p, search_len, *line_count, match_lines, t, eol, &after_count);
         }
 
         // Count lines.
@@ -351,13 +367,23 @@ int search_buffer(const char *buf,
 
         // Collect before context.
         if (op.before_context > 0 || op.context > 0) {
-            before_context(buf, line_head, last_line_end_by_after, *line_count, match_lines, eol);
+            before_context(buf, line_head, last_line_end_by_after, *line_count, match_lines, t, eol);
         }
 
         // Search next pattern in the current line and format them in order to print.
         m.start -= line_head - p;
         m.end    = m.start + plen;
-        match_count += format_line(line_head, line_end - line_head, pattern, plen, t, *line_count, &m, match_lines, thread_no);
+        match_count += format_line(
+            line_head,
+            line_end - line_head,
+            pattern,
+            plen,
+            t,
+            *line_count,
+            &m,
+            match_lines,
+            thread_no
+        );
 
         size_t diff = line_end - p + 1;
         if (search_len < diff) {
@@ -370,9 +396,12 @@ int search_buffer(const char *buf,
     // Collect last after context. And calculate max line number in this file in order to do
     // padding line number on printing result.
     if (match_count > 0 && search_len > 0 && (op.after_context > 0 || op.context > 0)) {
-        after_context(NULL, p, search_len, *line_count, match_lines, eol, &after_count);
+        after_context(NULL, p, search_len, *line_count, match_lines, t, eol, &after_count);
     }
-    match_lines->max_line_no = *line_count + after_count;
+
+    if (match_lines != NULL) {
+        match_lines->max_line_no = *line_count + after_count;
+    }
 
     return match_count;
 }
@@ -446,18 +475,6 @@ int search(int fd,
             thread_no
         );
         match_count += count;
-
-        // If hw search the pattern from stdin stream and find the pattern in the buffer, results
-        // are printed immedeately.
-        if (fd == STDIN_FILENO && count > 0) {
-            file_queue_node stream;
-            stream.t = t;
-            stream.match_lines = match_lines;
-            print_result(&stream);
-
-            // Release memory because matching line was already printed.
-            clear_line_list(match_lines);
-        }
 
         // Break loop if file pointer is reached to EOF. But if the file descriptor is stdin, we
         // should wait for next input. For example, if hw search from the pipe that is created by
