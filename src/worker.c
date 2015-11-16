@@ -16,8 +16,10 @@
 
 pthread_mutex_t file_mutex;
 pthread_mutex_t print_mutex;
+pthread_mutex_t print_immediately_mutex;
 pthread_cond_t file_cond;
 pthread_cond_t print_cond;
+pthread_cond_t print_immediately_cond;
 
 bool init_mutex()
 {
@@ -31,6 +33,11 @@ bool init_mutex()
         return false;
     }
 
+    if (pthread_cond_init(&print_immediately_cond, NULL)) {
+        log_e("A condition variable for print immediately result was not able to initialize.");
+        return false;
+    }
+
     if (pthread_mutex_init(&file_mutex, NULL)) {
         log_e("A mutex for file finding was not able to initialize.");
         return false;
@@ -41,6 +48,11 @@ bool init_mutex()
         return false;
     }
 
+    if (pthread_mutex_init(&print_immediately_mutex, NULL)) {
+        log_e("A mutex for print immediately result was not able to initialize.");
+        return false;
+    }
+
     return true;
 }
 
@@ -48,8 +60,10 @@ void destroy_mutex()
 {
     pthread_mutex_destroy(&file_mutex);
     pthread_mutex_destroy(&print_mutex);
+    pthread_mutex_destroy(&print_immediately_mutex);
     pthread_cond_destroy(&file_cond);
     pthread_cond_destroy(&print_cond);
+    pthread_cond_destroy(&print_immediately_cond);
 }
 
 /**
@@ -86,6 +100,7 @@ void *print_worker(void *arg)
             // Break this loop if all files was searched.
             if (current == NULL && is_complete_scan_file()) {
                 pthread_mutex_unlock(&print_mutex);
+                pthread_cond_signal(&print_immediately_cond);
                 return NULL;
             }
             pthread_cond_wait(&print_cond, &print_mutex);
@@ -95,7 +110,7 @@ void *print_worker(void *arg)
         }
         pthread_mutex_unlock(&print_mutex);
 
-        if (current->matched) {
+        if (current->matched && !current->printed) {
             print_result(current);
 
             // Insert new line to separate from previouse group if --group options is available.
@@ -104,6 +119,8 @@ void *print_worker(void *arg)
             }
 
             free_match_line_list(current->match_lines);
+            current->printed = true;
+            pthread_cond_signal(&print_immediately_cond);
         }
 
         // Current node is used on scaning target, so it should not release it's memory now.
@@ -117,6 +134,7 @@ void *print_worker(void *arg)
         current = current->next;
     }
 
+    pthread_cond_signal(&print_immediately_cond);
     return NULL;
 }
 
@@ -166,7 +184,7 @@ void *search_worker(void *arg)
 
             // Searching.
             match_line_list *match_lines = create_match_line_list();
-            int match_count = search(fd, pattern, pattern_len, t, match_lines, params->index);
+            int match_count = search(fd, current, pattern, pattern_len, t, match_lines, params->index);
 
             if (match_count > 0) {
                 // Set additional data to the queue data because it will be used on print worker in

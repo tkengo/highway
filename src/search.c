@@ -7,6 +7,7 @@
 #include "hwmalloc.h"
 #include "file.h"
 #include "fjs.h"
+#include "worker.h"
 #include "color.h"
 #include "util.h"
 #include "line_list.h"
@@ -212,6 +213,8 @@ int format_line(const char *line,
 
     if (match_lines == NULL) {
         print_line(NULL, t, node, 1);
+        tc_free(node->line);
+        tc_free(node);
     } else {
         enqueue_match_line(match_lines, node);
     }
@@ -263,6 +266,8 @@ void before_context(const char *buf,
 
         if (match_lines == NULL) {
             print_line(NULL, t, node, 1);
+            tc_free(node->line);
+            tc_free(node);
         } else {
             enqueue_match_line(match_lines, node);
         }
@@ -312,6 +317,8 @@ const char *after_context(const char *next_line_head,
 
         if (match_lines == NULL) {
             print_line(NULL, t, node, 1);
+            tc_free(node->line);
+            tc_free(node);
         } else {
             enqueue_match_line(match_lines, node);
         }
@@ -416,6 +423,7 @@ int search_buffer(const char *buf,
  * This method returns match count.
  */
 int search(int fd,
+           file_queue_node *current,
            const char *pattern,
            int pattern_len,
            enum file_type t,
@@ -472,6 +480,25 @@ int search(int fd,
             thread_no
         );
         match_count += count;
+
+        // If a lot of matching was found, we stop searching because memories used by highway will
+        // be increased in future. So from now print out results immediately when matching.
+        if (current != NULL && !current->printed && match_count >= MAX_MATCH_COUNT) {
+            if (current->prev != NULL) {
+                pthread_mutex_lock(&print_immediately_mutex);
+                while (!current->prev->printed) {
+                    pthread_cond_wait(&print_immediately_cond, &print_immediately_mutex);
+                }
+            }
+            pthread_mutex_unlock(&print_immediately_mutex);
+            current->matched     = true;
+            current->printed     = true;
+            current->match_lines = match_lines;
+            current->t           = t;
+            print_result(current);
+            free_match_line_list(match_lines);
+            match_lines = NULL;
+        }
 
         // Break loop if file pointer is reached to EOF. But if the file descriptor is stdin, we
         // should wait for next input. For example, if hw search from the pipe that is created by

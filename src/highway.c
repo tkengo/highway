@@ -96,7 +96,7 @@ int process_terminal()
 
 int process_stdin()
 {
-    search(STDIN_FILENO, op.pattern, strlen(op.pattern), locale_enc(), NULL, 0);
+    search(STDIN_FILENO, NULL, op.pattern, strlen(op.pattern), locale_enc(), NULL, 0);
     return 0;
 }
 

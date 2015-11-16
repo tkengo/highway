@@ -18,6 +18,7 @@ struct _file_queue_node {
     match_line_list *match_lines;
     bool searched;
     bool matched;
+    bool printed;
     enum file_type t;
 };
 

@@ -20,6 +20,7 @@ file_queue_node *enqueue_file(file_queue *queue, const char *filename)
     node->match_lines = NULL;
     node->searched    = false;
     node->matched     = false;
+    node->printed     = false;
     strcpy(node->filename, filename);
 
     if (queue->first) {

@@ -28,6 +28,6 @@ enum append_type {
 
 bool is_word_match(const char *buf, int len, match *m);
 void generate_bad_character_table(const char *pattern, enum file_type t);
-int search(int fd, const char *pattern, int pattern_len, enum file_type t, match_line_list *match_lines, int thread_no);
+int search(int fd, file_queue_node *current, const char *pattern, int pattern_len, enum file_type t, match_line_list *match_lines, int thread_no);
 
 #endif // HW_TABLE_H
