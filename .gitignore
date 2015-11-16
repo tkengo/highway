@@ -9,9 +9,11 @@
 /autom4te.cache
 /autoscan.log
 /config*
+/hw.dtps
 
 *.o
 .deps
 .dirstamp
+.DS_Store
 
 !configure.ac
