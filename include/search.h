@@ -3,7 +3,7 @@
 
 #define BAD_CHARACTER_TABLE_SIZE 256
 #define NMAX 65536
-#define MAX_MATCH_COUNT 1000
+#define MAX_MATCH_COUNT 5000
 
 enum file_type;
 
