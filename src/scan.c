@@ -157,6 +157,19 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
         } else if (is_search_target_by_entry(entry)) {
             enqueue_file_exclusively(queue, buf);
         }
+
+        // Some file systems ( ex. XFS ) don't support d_type.
+#ifndef _WIN32
+        if (entry->d_type == DT_UNKNOWN) {
+            struct stat st;
+            lstat(buf, &st);
+            if (S_ISDIR(st.st_mode)) {
+                scan_target(queue, buf, ignores, depth + 1);
+            } else if (is_search_target_by_stat(&st)) {
+                enqueue_file_exclusively(queue, buf);
+            }
+        }
+#endif
     }
 
     if (!op.all_files && ignores != NULL) {
