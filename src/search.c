@@ -185,6 +185,9 @@ int format_line(const char *line,
 
     // Allocate memory for colorized result string.
     int buffer_len = line_len + (op.color_match_len + OMIT_ESCAPE_LEN) * match_count;
+    if (match_count && !op.no_omit) {
+        buffer_len += OMIT_ESCAPE_LEN;
+    }
     match_line_node *node = (match_line_node *)hw_malloc(sizeof(match_line_node));
     node->line_no = line_no;
     node->context = CONTEXT_NONE;
