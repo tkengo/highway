@@ -128,6 +128,24 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
 
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
+        // Some file systems ( ex. xfs ) don't support d_type, so override d_type by `lstat`.
+#ifndef _WIN32
+        if (entry->d_type == DT_UNKNOWN) {
+            sprintf(buf, "%s%s", base, entry->d_name);
+            struct stat st;
+            lstat(buf, &st);
+            switch (st.st_mode & S_IFMT) {
+                case S_IFREG : entry->d_type = DT_REG ; break;
+                case S_IFDIR : entry->d_type = DT_DIR ; break;
+                case S_IFLNK : entry->d_type = DT_LNK ; break;
+                case S_IFCHR : entry->d_type = DT_CHR ; break;
+                case S_IFBLK : entry->d_type = DT_BLK ; break;
+                case S_IFIFO : entry->d_type = DT_FIFO; break;
+                case S_IFSOCK: entry->d_type = DT_SOCK; break;
+            }
+        }
+#endif
+
         // `readdir` returns also current or upper directory, but we don't need that directories,
         // so skip them. And also hidden directory doesn't need.
         if (is_skip_entry(entry)) {
