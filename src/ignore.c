@@ -108,10 +108,10 @@ ignore_hash *load_ignore_hash(const char *base, const char *path, int depth)
     return merge_ignore_hash(NULL, base, path, depth);
 }
 
-bool match_path(ignore_node *node, const char *path, const struct dirent *entry)
+bool match_path(ignore_node *node, const char *path, bool base_is_dir, const struct dirent *entry)
 {
     while (node) {
-        if (node->is_dir && !ENTRY_ISDIR(entry)) {
+        if (node->is_dir && !base_is_dir) {
             node = node->next;
             continue;
         }
@@ -139,7 +139,7 @@ bool match_path(ignore_node *node, const char *path, const struct dirent *entry)
 
 bool is_ignore(ignore_hash *hash, const char *path, bool is_dir, const struct dirent *entry)
 {
-    if (match_path(hash->accept, path, entry)) {
+    if (match_path(hash->accept, path, is_dir, entry)) {
         return false;
     }
 
@@ -161,7 +161,7 @@ bool is_ignore(ignore_hash *hash, const char *path, bool is_dir, const struct di
 
     node = hash->path[(unsigned char)path[0]];
     while (node) {
-        bool is_skip = (node->is_dir && !ENTRY_ISDIR(entry)) ||
+        bool is_skip = (node->is_dir && !is_dir) ||
                        !node->is_root;
         if (is_skip) {
             node = node->next;
@@ -176,7 +176,7 @@ bool is_ignore(ignore_hash *hash, const char *path, bool is_dir, const struct di
 
     node = hash->path[(unsigned char)entry->d_name[0]];
     while (node) {
-        bool is_skip = (node->is_dir && !ENTRY_ISDIR(entry)) ||
+        bool is_skip = (node->is_dir && !is_dir) ||
                        !node->is_no_dir ||
                        node->is_root;
         if (is_skip) {
@@ -190,7 +190,7 @@ bool is_ignore(ignore_hash *hash, const char *path, bool is_dir, const struct di
         node = node->next;
     }
 
-    return match_path(hash->glob, path, entry);
+    return match_path(hash->glob, path, is_dir, entry);
 }
 
 ignore_node *free_ignore_hash_by_depth(ignore_node *node, int depth)
