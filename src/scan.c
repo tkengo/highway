@@ -29,7 +29,7 @@ void enqueue_file_exclusively(file_queue *queue, const char *filename)
  * Check if the directory entry is ignored by the highway. The directory is ignored if it is the
  * current directory or upper directory or hidden directory (started directory name with dot `.`).
  */
-bool is_skip_entry(const struct dirent *entry)
+bool is_skip_entry(bool is_dir, const struct dirent *entry)
 {
 #ifdef HAVE_STRUCT_DIRENT_D_NAMLEN
     size_t len = entry->d_namlen;
@@ -37,7 +37,6 @@ bool is_skip_entry(const struct dirent *entry)
     size_t len = strlen(entry->d_name);
 #endif
 
-    bool is_dir = ENTRY_ISDIR(entry);
     bool cur    = len == 1 && entry->d_name[0] == '.';
     bool up     = len == 2 && entry->d_name[0] == '.' && entry->d_name[1] == '.';
     bool hidden = len  > 1 && entry->d_name[0] == '.' && !op.all_files;
@@ -126,12 +125,14 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
         }
     }
 
+    bool is_dir;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
+        sprintf(buf, "%s%s", base, entry->d_name);
+
         // Some file systems ( ex. xfs ) don't support d_type, so override d_type by `lstat`.
 #ifndef _WIN32
         if (entry->d_type == DT_UNKNOWN) {
-            sprintf(buf, "%s%s", base, entry->d_name);
             struct stat st;
             lstat(buf, &st);
             switch (st.st_mode & S_IFMT) {
@@ -146,16 +147,20 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
         }
 #endif
 
+#ifndef _WIN32
+        is_dir = entry->d_type == DT_DIR
+#else
+        is_dir = GetFileAttributes(buf) & FILE_ATTRIBUTE_DIRECTORY;
+#endif
+
         // `readdir` returns also current or upper directory, but we don't need that directories,
         // so skip them. And also hidden directory doesn't need.
-        if (is_skip_entry(entry)) {
+        if (is_skip_entry(is_dir, entry)) {
             continue;
         }
 
-        sprintf(buf, "%s%s", base, entry->d_name);
-
         // Check whether if the file is ignored by gitignore. If it is ignored, skip finding.
-        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, entry)) {
+        if (!op.all_files && ignores != NULL && is_ignore(ignores, buf, is_dir, entry)) {
             continue;
         }
 
@@ -170,7 +175,7 @@ void scan_target(file_queue *queue, const char *dir_path, ignore_hash *ignores, 
         }
 #endif
 
-        if (ENTRY_ISDIR(entry)) {
+        if (is_dir) {
             scan_target(queue, buf, ignores, depth + 1);
         } else if (is_search_target_by_entry(entry)) {
             enqueue_file_exclusively(queue, buf);

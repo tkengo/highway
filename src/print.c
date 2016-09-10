@@ -23,7 +23,7 @@ void print_filename(const char *filename)
 
 void print_line_number(match_line_node *match_line, int max_digit)
 {
-    char *color, sep;
+    char *color = NULL, sep = 0;
     switch (match_line->context) {
         case CONTEXT_NONE:
             color = op.color_line_number;

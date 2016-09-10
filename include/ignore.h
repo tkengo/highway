@@ -26,7 +26,7 @@ typedef struct _ignore_hash {
     ignore_node *accept;
 } ignore_hash;
 
-bool is_ignore(ignore_hash *hash, const char *path, const struct dirent *entry);
+bool is_ignore(ignore_hash *hash, const char *path, bool is_dir, const struct dirent *entry);
 ignore_hash *merge_ignore_hash(ignore_hash *hash, const char *base, const char *path, int depth);
 ignore_hash *load_ignore_hash(const char *base, const char *path, int depth);
 void free_ignore_hash(ignore_hash *hash, int depth);

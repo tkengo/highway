@@ -15,10 +15,8 @@
 #define IS_STDOUT_REDIRECT (!isatty(STDOUT_FILENO))
 
 #ifndef _WIN32
-#define ENTRY_ISDIR(e) (e->d_type == DT_DIR)
 #define IS_PATHSEP(c) (c == '/')
 #else
-#define ENTRY_ISDIR(e) (GetFileAttributes(e->d_name) & FILE_ATTRIBUTE_DIRECTORY)
 #define IS_PATHSEP(c) (c == '/' || c == '\\')
 typedef int rlim_t;
 #endif
