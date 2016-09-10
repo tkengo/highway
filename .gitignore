@@ -10,6 +10,8 @@
 /autoscan.log
 /config*
 
+tags
+*.exe
 *.o
 .deps
 .dirstamp
