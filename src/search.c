@@ -403,7 +403,6 @@ int search(int fd,
     ssize_t read_len;
     int buf_offset = 0;
     int match_count = 0;
-    bool do_search = false;
     char *buf = (char *)hw_calloc(n + 1, SIZE_OF_CHAR);
     char *last_new_line_scan_pos = buf;
     char *last_line_end;
@@ -418,7 +417,7 @@ int search(int fd,
         // Search end position of the last line in the buffer. We search from the first position
         // and end position of the last line.
         size_t search_len;
-        if (read_len < NMAX) {
+        if (read_sum < NMAX) {
             last_line_end = buf + read_sum;
             search_len = read_sum;
             buf[read_sum] = eol;
@@ -431,8 +430,6 @@ int search(int fd,
             }
             search_len = last_line_end - buf;
         }
-
-        do_search = true;
 
         // Search the pattern and construct matching results. The results will be stored to list
         // `match_lines`.
