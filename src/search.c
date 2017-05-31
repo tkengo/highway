@@ -418,7 +418,7 @@ int search(int fd,
         // Search end position of the last line in the buffer. We search from the first position
         // and end position of the last line.
         size_t search_len;
-        if (read_len < NMAX) {
+        if (read_sum < NMAX) {
             last_line_end = buf + read_sum;
             search_len = read_sum;
             buf[read_sum] = eol;
